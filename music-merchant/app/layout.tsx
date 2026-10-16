@@ -49,12 +49,12 @@ export default function RootLayout({
                     <span>Connected to TD Retail Platform API</span>
                     <span>•</span>
                     <a
-                      href={process.env.NEXT_PUBLIC_TD_RETAIL_API_URL || 'http://localhost:3000'}
+                      href={`${process.env.NEXT_PUBLIC_TD_RETAIL_API_URL || 'http://localhost:3000'}/chat/conv_music_01`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="underline hover:text-foreground transition-colors"
                     >
-                      Consolidated Support Inbox →
+                      Active Support Chat →
                     </a>
                   </div>
                 </div>

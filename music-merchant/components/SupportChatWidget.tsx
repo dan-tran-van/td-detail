@@ -287,16 +287,20 @@ export function SupportChatWidget({
             </Button>
           </form>
 
-          {/* Deep link to consolidated inbox */}
+          {/* Deep link to active chat thread */}
           <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
             <span>Also saved to your inbox:</span>
             <a
-              href={`${process.env.NEXT_PUBLIC_TD_RETAIL_API_URL || 'http://localhost:3000'}/inbox`}
+              href={
+                conversation?.id
+                  ? `${process.env.NEXT_PUBLIC_TD_RETAIL_API_URL || 'http://localhost:3000'}/chat/${conversation.id}`
+                  : `${process.env.NEXT_PUBLIC_TD_RETAIL_API_URL || 'http://localhost:3000'}/inbox`
+              }
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-primary hover:underline font-medium"
             >
-              <span>Consolidated Inbox</span>
+              <span>{conversation?.id ? 'Open Active Chat in TD Retail' : 'Consolidated Inbox'}</span>
               <ExternalLink className="h-3 w-3" />
             </a>
           </div>
