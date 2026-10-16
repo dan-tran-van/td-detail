@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="dacBg" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#1E293B"/>
+      <stop offset="100%" stop-color="#0A0D14"/>
+    </radialGradient>
+    <radialGradient id="tubeGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFedd5"/>
+      <stop offset="40%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="400" rx="24" fill="url(#dacBg)"/>
+  <!-- Vacuum Tube 1 (Left) -->
+  <g transform="translate(130, 95)">
+    <!-- Tube glow -->
+    <circle cx="25" cy="45" r="38" fill="url(#tubeGlow)" opacity="0.6"/>
+    <!-- Glass envelope -->
+    <rect x="5" y="10" width="40" height="65" rx="18" fill="#38BDF8" fill-opacity="0.12" stroke="#94A3B8" stroke-width="1.5"/>
+    <!-- Glowing filament -->
+    <path d="M 20 55 Q 25 30 30 55" fill="none" stroke="#F97316" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="25" cy="42" r="3" fill="#FDE047"/>
+    <!-- Tube base -->
+    <rect x="2" y="70" width="46" height="15" rx="3" fill="#0F172A" stroke="#D4AF37" stroke-width="1.5"/>
+  </g>
+  <!-- Vacuum Tube 2 (Right) -->
+  <g transform="translate(220, 95)">
+    <!-- Tube glow -->
+    <circle cx="25" cy="45" r="38" fill="url(#tubeGlow)" opacity="0.6"/>
+    <!-- Glass envelope -->
+    <rect x="5" y="10" width="40" height="65" rx="18" fill="#38BDF8" fill-opacity="0.12" stroke="#94A3B8" stroke-width="1.5"/>
+    <!-- Glowing filament -->
+    <path d="M 20 55 Q 25 30 30 55" fill="none" stroke="#F97316" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="25" cy="42" r="3" fill="#FDE047"/>
+    <!-- Tube base -->
+    <rect x="2" y="70" width="46" height="15" rx="3" fill="#0F172A" stroke="#D4AF37" stroke-width="1.5"/>
+  </g>
+  <!-- Amp Chassis -->
+  <rect x="80" y="180" width="240" height="110" rx="10" fill="#0F172A" stroke="#334155" stroke-width="2"/>
+  <!-- Volume Knob -->
+  <circle cx="200" cy="235" r="28" fill="#1E293B" stroke="#D4AF37" stroke-width="2.5"/>
+  <circle cx="200" cy="235" r="22" fill="#0A0D14"/>
+  <line x1="200" y1="235" x2="200" y2="218" stroke="#D4AF37" stroke-width="3" stroke-linecap="round"/>
+  <!-- Headphone Jacks -->
+  <circle cx="120" cy="235" r="10" fill="#020617" stroke="#64748B" stroke-width="2"/>
+  <circle cx="120" cy="235" r="5" fill="#D4AF37"/>
+  <circle cx="280" cy="235" r="7" fill="#020617" stroke="#64748B" stroke-width="1.5"/>
+  <circle cx="280" cy="235" r="3.5" fill="#D4AF37"/>
+  <text x="200" y="340" text-anchor="middle" fill="#94A3B8" font-family="system-ui, sans-serif" font-size="12" letter-spacing="3">12AU7 VACUUM TUBES • 32-BIT DAC</text>
+</svg>

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="terraBg" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#F7FEE7"/>
+      <stop offset="100%" stop-color="#ECFDF5"/>
+    </radialGradient>
+    <linearGradient id="waffleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FEF3C7"/>
+      <stop offset="50%" stop-color="#FDE68A"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" rx="24" fill="url(#terraBg)"/>
+  <!-- Folded Stack of Waffle Throws -->
+  <g transform="translate(100, 110)">
+    <!-- Bottom layer -->
+    <rect x="0" y="90" width="200" height="45" rx="12" fill="#E2E8F0" stroke="#CBD5E1" stroke-width="2"/>
+    <line x1="20" y1="112" x2="180" y2="112" stroke="#94A3B8" stroke-width="2" stroke-dasharray="4 6"/>
+    <!-- Middle layer (Indigo) -->
+    <rect x="10" y="50" width="180" height="45" rx="12" fill="#3B82F6" fill-opacity="0.25" stroke="#2563EB" stroke-width="2"/>
+    <line x1="25" y1="72" x2="175" y2="72" stroke="#1D4ED8" stroke-width="2" stroke-dasharray="4 6"/>
+    <!-- Top layer (Natural Honey Cotton) -->
+    <rect x="20" y="10" width="160" height="45" rx="12" fill="url(#waffleGrad)" stroke="#B45309" stroke-width="2"/>
+    <line x1="35" y1="32" x2="165" y2="32" stroke="#78350F" stroke-width="2" stroke-dasharray="4 6"/>
+    <!-- Artisanal Twine Ribbon -->
+    <rect x="95" y="0" width="10" height="140" fill="#78350F" rx="3"/>
+    <circle cx="100" cy="5" r="8" fill="#B45309"/>
+    <!-- Botanical sprig tucked under ribbon -->
+    <path d="M 100 5 Q 120 -15 130 -30" fill="none" stroke="#059669" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="120" cy="-15" rx="6" ry="3" fill="#10B981" transform="rotate(-30 120 -15)"/>
+  </g>
+  <text x="200" y="340" text-anchor="middle" fill="#065F46" font-family="system-ui, sans-serif" font-size="12" letter-spacing="3">GOTS ORGANIC COTTON • HAND-LOOMED</text>
+</svg>

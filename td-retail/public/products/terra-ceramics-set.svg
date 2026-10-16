@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="terraBg" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#F7FEE7"/>
+      <stop offset="100%" stop-color="#ECFDF5"/>
+    </radialGradient>
+    <linearGradient id="clayGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F8FAFC"/>
+      <stop offset="60%" stop-color="#E2E8F0"/>
+      <stop offset="100%" stop-color="#CBD5E1"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" rx="24" fill="url(#terraBg)"/>
+  <!-- Pour-Over Dripper Cone -->
+  <g transform="translate(130, 90)">
+    <!-- Dripper cone -->
+    <path d="M 30 10 L 110 10 L 85 85 L 55 85 Z" fill="url(#clayGrad)" stroke="#78350F" stroke-width="2.5"/>
+    <ellipse cx="70" cy="10" rx="40" ry="10" fill="#FEF3C7" stroke="#78350F" stroke-width="2"/>
+    <!-- Speckles -->
+    <circle cx="55" cy="35" r="1.5" fill="#78350F"/>
+    <circle cx="85" cy="45" r="1.5" fill="#78350F"/>
+    <circle cx="68" cy="60" r="1.5" fill="#78350F"/>
+    <!-- Server Carafe Base below -->
+    <path d="M 50 85 L 35 155 L 105 155 L 90 85 Z" fill="#94A3B8" fill-opacity="0.2" stroke="#64748B" stroke-width="2"/>
+    <ellipse cx="70" cy="155" rx="35" ry="10" fill="#E2E8F0"/>
+    <path d="M 100 105 C 125 105, 125 140, 102 140" fill="none" stroke="#64748B" stroke-width="3"/>
+  </g>
+  <!-- Tasting Cup (Right) -->
+  <g transform="translate(255, 175)">
+    <path d="M 10 10 L 15 65 L 55 65 L 60 10 Z" fill="url(#clayGrad)" stroke="#78350F" stroke-width="2"/>
+    <ellipse cx="35" cy="10" rx="25" ry="7" fill="#FEF3C7" stroke="#78350F" stroke-width="1.5"/>
+    <circle cx="28" cy="30" r="1.5" fill="#78350F"/>
+    <circle cx="42" cy="45" r="1.5" fill="#78350F"/>
+  </g>
+  <text x="200" y="340" text-anchor="middle" fill="#065F46" font-family="system-ui, sans-serif" font-size="12" letter-spacing="3">RIVER CLAY • HAND-THROWN DRIPPER</text>
+</svg>

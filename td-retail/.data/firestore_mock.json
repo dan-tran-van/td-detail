@@ -1,0 +1,189 @@
+{
+  "orders": {
+    "ORD-AURA-109284": {
+      "orderId": "ORD-AURA-109284",
+      "merchantId": "merchant_a",
+      "customerName": "Priya Nair",
+      "customerEmail": "priya.nair@example.com",
+      "customerPhone": "+91 98450 11223",
+      "items": [
+        {
+          "productId": "aura-anc-pro",
+          "name": "Aura Horizon ANC Wireless Headphones",
+          "price": 24999,
+          "quantity": 1,
+          "lineTotal": 24999,
+          "imageUrl": "/products/aura-anc-pro.svg"
+        },
+        {
+          "productId": "aura-earbuds-air",
+          "name": "Aura Pulse Spatial True Wireless Earbuds",
+          "price": 12499,
+          "quantity": 1,
+          "lineTotal": 12499,
+          "imageUrl": "/products/aura-earbuds-air.svg"
+        }
+      ],
+      "subtotal": 37498,
+      "currency": "INR",
+      "orderStatus": "CONFIRMED",
+      "createdAt": "2026-10-13T14:22:53.899Z",
+      "updatedAt": "2026-10-13T14:22:53.899Z",
+      "anonymousSessionId": "demo_seed_session_aura",
+      "orderAccessToken": "oat_demo_seed_aura_token_9988",
+      "emailStatus": "dev_outbox"
+    },
+    "ORD-TERRA-204918": {
+      "orderId": "ORD-TERRA-204918",
+      "merchantId": "merchant_b",
+      "customerName": "Rohan Varma",
+      "customerEmail": "rohan.varma@example.com",
+      "customerPhone": "+91 99000 88776",
+      "items": [
+        {
+          "productId": "terra-candle-trio",
+          "name": "Terra Botanical Forest Aromatics Trio",
+          "price": 2499,
+          "quantity": 2,
+          "lineTotal": 4998,
+          "imageUrl": "/products/terra-candle-trio.svg"
+        },
+        {
+          "productId": "terra-diffuser-stone",
+          "name": "Terra Nebulizing Stone Ultrasonic Diffuser",
+          "price": 4850,
+          "quantity": 1,
+          "lineTotal": 4850,
+          "imageUrl": "/products/terra-diffuser-stone.svg"
+        }
+      ],
+      "subtotal": 9848,
+      "currency": "INR",
+      "orderStatus": "SHIPPED",
+      "createdAt": "2026-10-12T14:22:53.899Z",
+      "updatedAt": "2026-10-14T02:22:53.899Z",
+      "anonymousSessionId": "demo_seed_session_terra",
+      "orderAccessToken": "oat_demo_seed_terra_token_7766",
+      "emailStatus": "dev_outbox"
+    },
+    "ORD-AURA-888999": {
+      "orderId": "ORD-AURA-888999",
+      "merchantId": "merchant_a",
+      "customerName": "Alice Secret",
+      "customerEmail": "alice@private.com",
+      "items": [
+        {
+          "productId": "aura-anc-pro",
+          "name": "Aura Horizon ANC Wireless Headphones",
+          "price": 24999,
+          "quantity": 1,
+          "lineTotal": 24999
+        }
+      ],
+      "subtotal": 24999,
+      "currency": "INR",
+      "orderStatus": "CONFIRMED",
+      "createdAt": "2026-10-14T14:25:49.389Z",
+      "updatedAt": "2026-10-14T14:25:49.389Z",
+      "anonymousSessionId": "sess_owner_alice",
+      "orderAccessToken": "oat_super_secure_random_token_xyz123",
+      "emailStatus": "dev_outbox"
+    },
+    "ORD-AURA-777001": {
+      "orderId": "ORD-AURA-777001",
+      "merchantId": "merchant_a",
+      "customerName": "Dual Shopper",
+      "customerEmail": "shopper@test.com",
+      "items": [
+        {
+          "productId": "aura-anc-pro",
+          "name": "Aura Horizon ANC Wireless Headphones",
+          "price": 24999,
+          "quantity": 1,
+          "lineTotal": 24999
+        }
+      ],
+      "subtotal": 24999,
+      "currency": "INR",
+      "orderStatus": "CONFIRMED",
+      "createdAt": "2026-10-14T14:25:49.395Z",
+      "updatedAt": "2026-10-14T14:25:49.396Z",
+      "anonymousSessionId": "sess_multi_merchant_user_777",
+      "orderAccessToken": "token_a_777",
+      "emailStatus": "dev_outbox"
+    },
+    "ORD-TERRA-777002": {
+      "orderId": "ORD-TERRA-777002",
+      "merchantId": "merchant_b",
+      "customerName": "Dual Shopper",
+      "customerEmail": "shopper@test.com",
+      "items": [
+        {
+          "productId": "terra-candle-trio",
+          "name": "Terra Botanical Forest Aromatics Trio",
+          "price": 2499,
+          "quantity": 1,
+          "lineTotal": 2499
+        }
+      ],
+      "subtotal": 2499,
+      "currency": "INR",
+      "orderStatus": "CONFIRMED",
+      "createdAt": "2026-10-14T14:25:49.396Z",
+      "updatedAt": "2026-10-14T14:25:49.396Z",
+      "anonymousSessionId": "sess_multi_merchant_user_777",
+      "orderAccessToken": "token_b_777",
+      "emailStatus": "dev_outbox"
+    },
+    "ORD-AURA-449394": {
+      "orderId": "ORD-AURA-449394",
+      "merchantId": "merchant_a",
+      "customerName": "Test Buyer",
+      "customerEmail": "buyer@test.com",
+      "customerPhone": "+91 91234 56789",
+      "items": [
+        {
+          "productId": "aura-anc-pro",
+          "name": "Aura Horizon ANC Wireless Headphones",
+          "price": 24999,
+          "quantity": 2,
+          "lineTotal": 49998,
+          "imageUrl": "/products/aura-anc-pro.svg"
+        }
+      ],
+      "subtotal": 49998,
+      "currency": "INR",
+      "orderStatus": "CONFIRMED",
+      "createdAt": "2026-10-14T14:23:44.908Z",
+      "updatedAt": "2026-10-14T14:23:44.909Z",
+      "anonymousSessionId": "sess_test_12345",
+      "orderAccessToken": "oat_bc2a05e0246debcb5e98edca7f19ad1d582ac1696d996bc2",
+      "emailStatus": "dev_outbox"
+    },
+    "ORD-AURA-646531": {
+      "orderId": "ORD-AURA-646531",
+      "merchantId": "merchant_a",
+      "customerName": "Test Buyer",
+      "customerEmail": "buyer@test.com",
+      "customerPhone": "+91 91234 56789",
+      "items": [
+        {
+          "productId": "aura-anc-pro",
+          "name": "Aura Horizon ANC Wireless Headphones",
+          "price": 24999,
+          "quantity": 2,
+          "lineTotal": 49998,
+          "imageUrl": "/products/aura-anc-pro.svg"
+        }
+      ],
+      "subtotal": 49998,
+      "currency": "INR",
+      "orderStatus": "CONFIRMED",
+      "createdAt": "2026-10-14T14:25:49.424Z",
+      "updatedAt": "2026-10-14T14:25:49.425Z",
+      "anonymousSessionId": "sess_test_12345",
+      "orderAccessToken": "oat_0cabef87bc5dd4583f3d17fdafe9b407112327330ae8a64c",
+      "emailStatus": "dev_outbox"
+    }
+  }
+}
