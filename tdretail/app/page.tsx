@@ -162,12 +162,17 @@ export default function LandingPage() {
                 </Button>
               </NextLink>
 
-              <NextLink href="/storefront/music" className="flex-1">
+              <a
+                href={process.env.NEXT_PUBLIC_MUSIC_MERCHANT_URL || 'http://localhost:3001'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1"
+              >
                 <Button size="sm" variant="outline" className="w-full text-xs gap-1.5 border-border">
                   <ExternalLink className="h-3.5 w-3.5" />
-                  <span>Storefront Demo</span>
+                  <span>Open Music Storefront</span>
                 </Button>
-              </NextLink>
+              </a>
             </CardContent>
           </Card>
 
@@ -204,10 +209,10 @@ export default function LandingPage() {
                 </Button>
               </NextLink>
 
-              <NextLink href="/storefront/groceries" className="flex-1">
+              <NextLink href="/inbox" className="flex-1">
                 <Button size="sm" variant="outline" className="w-full text-xs gap-1.5 border-border">
                   <ExternalLink className="h-3.5 w-3.5" />
-                  <span>Storefront Demo</span>
+                  <span>View in Inbox</span>
                 </Button>
               </NextLink>
             </CardContent>

@@ -55,16 +55,21 @@ export function Navbar() {
             </Button>
           </NextLink>
 
-          <NextLink href="/storefront/groceries" className="hidden sm:inline-flex">
+          <a
+            href={process.env.NEXT_PUBLIC_MUSIC_MERCHANT_URL || 'http://localhost:3001'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:inline-flex"
+          >
             <Button
-              variant={pathname?.startsWith('/storefront') ? 'secondary' : 'ghost'}
+              variant="ghost"
               size="sm"
               className="gap-1.5 text-xs h-8"
             >
               <Store className="h-3.5 w-3.5" />
-              <span>Storefronts</span>
+              <span>Music Storefront</span>
             </Button>
-          </NextLink>
+          </a>
         </div>
       </div>
     </header>

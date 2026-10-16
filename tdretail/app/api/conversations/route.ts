@@ -108,13 +108,33 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({
-      success: true,
-      conversation: newConv,
-      messages: [customerMsg, aiMsg].filter(Boolean),
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        conversation: newConv,
+        messages: [customerMsg, aiMsg].filter(Boolean),
+      },
+      {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      }
+    );
   } catch (error) {
     console.error('[API] Error creating conversation:', error);
     return NextResponse.json({ error: 'Failed to create conversation' }, { status: 500 });
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
 }
