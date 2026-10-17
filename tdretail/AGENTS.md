@@ -55,17 +55,35 @@ TD Retail is an AI-powered multi-merchant customer support platform built on Nex
   - New Ticket / Inquiry creation button.
   - Active conversation listing with unread / escalation badges.
   - Shopper Persona switcher at the bottom footer.
-- **Message Rendering**:
-  - Assistant and specialist messages are parsed with `react-markdown` and `remark-gfm` in [app/chat/[conversationId]/page.tsx](file:///home/dan/Documents/projects/nextjs-projects/tdretail/app/chat/%5BconversationId%5D/page.tsx).
-  - Code blocks, tables, bold/italic, lists, blockquotes, and links are styled strictly using semantic shadcn classes.
+- **Message Rendering & Markdown**:
+  - Assistant and specialist messages are parsed with `<ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>` in [app/chat/[conversationId]/page.tsx](file:///home/dan/Documents/projects/nextjs-projects/tdretail/app/chat/%5BconversationId%5D/page.tsx).
+  - `remark-breaks` is mandatory to ensure single newlines render as line breaks (`<br />`) rather than collapsing into single paragraphs.
+  - Code blocks, tables, bold/italic, lists (`- ` or `* `), blockquotes, and links are styled strictly using semantic shadcn classes with Tailwind typography prose extensions.
   - Interactive Gemini Tool Calls inspector button to show execution details.
 
-### B. Gmail-style Standalone Outbox (`/outbox`)
+### B. Gemini Agent Service Architecture (`lib/services/geminiService.ts`)
+- **Active Model**: Uses `gemini-3.5-flash-lite` with `@google/genai` SDK.
+  - *Important*: `gemini-2.5-flash` and `gemini-3.8-flash` free-tier quotas are easily exhausted (429 quota error). Keep `gemini-3.5-flash-lite` as the primary engine for high availability and reliable function calling.
+- **Function Calling & Tool Execution**:
+  - Two declared tools: `lookupOrderStatus({ orderId })` and `requestHumanEscalation({ reason })`.
+  - When returning function call responses to Gemini, **always preserve the original `id`** (`fc.id`) on the `functionResponse` part, and pass the exact previous `candidate.content` containing the `thoughtSignature`.
+- **History Turn Invariant**:
+  - In `/api/conversations/[id]/messages/route.ts`, the customer message is added to `TDStore` before calling `GeminiAgentService.processMessage()`.
+  - To prevent consecutive `user` turns (`user -> user`) which Gemini API rejects with a 400 error, `processMessage()` filters out the duplicate incoming message from the history slice before appending the active turn.
+- **Grounded Fallback Engine**:
+  - If the Gemini API key is missing or encounters rate limits, `executeGroundedFallbackEngine()` handles requests locally with verified database checks.
+  - Features smart intent classification (detects refund/cancellation, escalation, order status queries, and general inquiries) so it does not repetitively output order details for non-order questions.
+  - Fallback string templates must use standard Markdown bullets (`- `) with double newlines rather than unicode bullet characters (`• `).
+
+### C. Gmail-style Standalone Outbox (`/outbox`)
 - Standalone webmail interface located at [app/outbox/page.tsx](file:///home/dan/Documents/projects/nextjs-projects/tdretail/app/outbox/page.tsx).
 - Features Gmail-like layout: top search bar, mail folder sidebar (Sent, All Mail, Starred), email inspection panel, SendGrid reply webhook simulator, and quick switcher to return to Chat Inbox (`/inbox`).
 - Standalone persona switcher button in the top right.
+- `EmailService` (`lib/services/emailService.ts`):
+  - Checks if `SENDGRID_API_KEY` is configured and not the default placeholder (`your_sendgrid_api_key`).
+  - If unconfigured, instantly routes emails to the local outbox without network timeouts.
 
-### C. Persona Switcher Mechanism
+### D. Persona Switcher Mechanism
 - **Active Personas**: Defined in `lib/data/seedData.ts` (`cust_sarah_connor`, `cust_alex_chen`).
 - **Session API**:
   - `GET /api/session` returns current customer and all available demo personas.
@@ -74,14 +92,18 @@ TD Retail is an AI-powered multi-merchant customer support platform built on Nex
   - Accessible **Dialog Modals** in both `ModernAppShell.tsx` and `app/outbox/page.tsx`.
   - Switching immediately writes `document.cookie`, calls `/api/session`, and performs a clean reload to sync all tickets and orders.
 
-### D. External Merchant Integration (`music-merchant`)
+### E. External Merchant Integration (`music-merchant`) & CORS
 - **Independent Merchant A Storefront**: Built as a standalone Next.js app in `/music-merchant` running on port 3001. Demo storefront routes originally in `tdretail` (`/storefront/music`, etc.) have been removed.
+- **Cross-Origin Resource Sharing (CORS)**:
+  - Enabled across all `/api/:path*` routes in `tdretail/next.config.ts`.
+  - Explicit `OPTIONS` preflight handlers and `Access-Control-Allow-Origin: *` headers are present in `app/api/conversations/route.ts`, `app/api/conversations/[id]/route.ts`, and `app/api/conversations/[id]/messages/route.ts`.
 - **Cross-App Navigation**:
   - `tdretail` Navbar includes a direct link to the external music storefront (`http://localhost:3001`).
   - Storefront links directly to active chat threads (`/chat/[conversationId]`) in `tdretail`.
 - **REST Endpoints for External Merchants**:
   - `POST /api/orders`: Ingests and stores orders placed externally in Firestore/db.json with CORS headers enabled.
   - `POST /api/conversations`: Ingests customer support inquiries started externally from the storefront support drawer with CORS headers enabled.
+  - `POST /api/conversations/[id]/messages`: Ingests customer follow-up chat messages and returns Gemini AI responses.
 
 ---
 

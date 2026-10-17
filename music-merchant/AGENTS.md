@@ -43,9 +43,11 @@ SoundWave Digital (`music-merchant`) is a standalone digital music distributor b
 1. **Embedded Support Drawer (`components/SupportChatWidget.tsx`)**:
    - Built on shadcn `Sheet` drawer accessible from the storefront header or any order details card.
    - Contextually passes the active `orderId` to TD Retail's conversation API.
-2. **REST Support Session Initialization**:
+   - **Markdown Rendering**: AI responses are rendered using `<ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>`. `remark-breaks` ensures all line breaks, bullet points (`- `), and paragraph spacing render cleanly without collapsing.
+2. **REST Support Session Initialization & Messaging**:
    - `POST ${NEXT_PUBLIC_TD_RETAIL_API_URL}/api/conversations` creates a conversation thread in `tdretail`.
-   - The central Gemini AI grounding engine immediately verifies the order details, confirms active status, and outputs license keys or answers policy questions.
+   - `POST ${NEXT_PUBLIC_TD_RETAIL_API_URL}/api/conversations/[id]/messages` sends subsequent customer inquiries and receives grounded Gemini AI answers.
+   - Requires CORS headers (`Access-Control-Allow-Origin: *`) on `tdretail` API endpoints.
 3. **Deep Linking to Active Chat**:
    - Links in the support drawer and storefront footer deep link directly to the active chat thread: `${NEXT_PUBLIC_TD_RETAIL_API_URL}/chat/${conversation.id}` (fallback to `/chat/conv_music_01` or `/inbox`), ensuring customers and support agents land directly on the active thread rather than a generic inbox overview.
 
@@ -59,7 +61,8 @@ SoundWave Digital (`music-merchant`) is a standalone digital music distributor b
    - Standard shadcn styling preset with dark mode support.
    - Always use semantic color tokens: `bg-background`, `text-foreground`, `bg-card`, `text-card-foreground`, `border-border`, `bg-primary`, `text-primary-foreground`, `bg-muted`, `text-muted-foreground`.
    - Avoid hardcoded ad-hoc hex colors across application components.
-3. **React Bits Integration**:
+3. **React Bits Integration & Rule**:
+   - **CRITICAL**: Do **NOT** edit, modify, or rewrite the internal code of components installed from React Bits in `components/` (e.g. `Antigravity.tsx`, `SplitText.tsx`, `ShinyText.tsx`, `TiltedCard.tsx`, `Beams.tsx`, `Waves.tsx`, etc.). Only adjust props or wrap them with styling containers.
    - Installed React Bits components reside in `components/`:
      - `Antigravity.tsx`: Interactive canvas particle physics animation for the Hero section.
      - `SplitText.tsx`: Animated staggered typography using GSAP for headline reveals.
