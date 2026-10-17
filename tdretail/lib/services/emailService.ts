@@ -15,7 +15,7 @@ export interface SendSupportEmailParams {
 export class EmailService {
   private static isSendGridConfigured(): boolean {
     const key = process.env.SENDGRID_API_KEY;
-    return Boolean(key && key.startsWith('SG.'));
+    return Boolean(key && key.startsWith('SG.') && !key.includes('your_sendgrid_api_key'));
   }
 
   /**
