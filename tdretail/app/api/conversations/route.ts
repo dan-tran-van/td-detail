@@ -82,7 +82,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const convId = `conv_${merchant.category === 'digital_music' ? 'music' : 'grocery'}_${crypto.randomUUID()}`;
+    const merchantPrefix = (merchant.slug || merchant.category || merchant.id).replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+    const convId = `conv_${merchantPrefix}_${crypto.randomUUID()}`;
     const now = new Date().toISOString();
 
     const newConv: Conversation = {
