@@ -31,38 +31,57 @@ export async function POST(req: NextRequest) {
     const customer = await getCurrentCustomer();
     const body = await req.json();
 
+    const customerEmail = body.customerEmail || customer.email;
+    const customerName = body.customerName || customer.name;
+    const customerId = body.customerId || (customerEmail ? `cust_${customerEmail.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}` : customer.id);
+
     const newOrder: Order = {
-      id: `order_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: body.id || `order_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       orderId: body.orderId || `ORD-${body.merchantId === 'merchant_music' ? 'MUS' : 'GROC'}-${Math.floor(1000 + Math.random() * 9000)}`,
-      merchantId: body.merchantId,
-      customerId: customer.id,
-      customerEmail: customer.email,
-      customerName: customer.name,
+      merchantId: body.merchantId || 'merchant_music',
+      customerId: customerId,
+      customerEmail: customerEmail,
+      customerName: customerName,
       items: body.items || [],
       orderStatus: body.orderStatus || 'processing',
       orderStatusDisplay: body.orderStatusDisplay || 'Order Confirmed & Processing',
-      totalAmount: body.totalAmount || 19.99,
-      currency: 'USD',
-      trackingNumber: `TRK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      estimatedDelivery: body.estimatedDelivery || 'In 1-2 business days',
-      deliveryAddress: customer.defaultAddress || 'On file',
-      createdAt: new Date().toISOString(),
+      totalAmount: body.totalAmount ?? 19.99,
+      currency: body.currency || 'INR',
+      trackingNumber: body.trackingNumber || `TRK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+      carrierOrCourier: body.carrierOrCourier || 'SoundWave Instant Cloud Delivery',
+      estimatedDelivery: body.estimatedDelivery || 'Immediate (Instant Access)',
+      deliveryAddress: body.deliveryAddress || `Digital Vault (${customerEmail})`,
+      courierNotes: body.courierNotes || 'License active and master files accessible in customer vault.',
+      createdAt: body.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    // Store in database
-    const state = await TDStore.getOrderById(newOrder.orderId);
-    if (!state) {
-      // In local mode or Firestore, save it
-      const { initFirebaseAdmin } = await import('@/lib/firebase/admin');
-      const { firestore, isConfigured } = initFirebaseAdmin();
-      if (isConfigured && firestore) {
-        await firestore.collection('orders').doc(newOrder.orderId).set(newOrder);
-      }
-    }
+    // Store in database (Firestore in prod, db.json in dev)
+    await TDStore.addOrder(newOrder);
 
-    return NextResponse.json({ success: true, order: newOrder });
+    return NextResponse.json(
+      { success: true, order: newOrder },
+      {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      }
+    );
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to create simulated order' }, { status: 500 });
+    console.error('Error saving order in tdretail API:', error);
+    return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
 }

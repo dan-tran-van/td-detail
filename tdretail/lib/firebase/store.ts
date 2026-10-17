@@ -249,6 +249,22 @@ export class TDStore {
     return null;
   }
 
+  static async addOrder(order: Order): Promise<Order> {
+    const firestore = await this.getFirestoreClient();
+    if (firestore) {
+      try {
+        await firestore.collection('orders').doc(order.orderId).set(order, { merge: true });
+      } catch (e) {
+        console.warn(`[Store] Firestore write error for order ${order.orderId}:`, e);
+      }
+    }
+
+    const state = loadState();
+    state.orders[order.orderId] = order;
+    saveState();
+    return order;
+  }
+
   // --- Conversations ---
   static async getConversations(customerId?: string, merchantId?: string): Promise<Conversation[]> {
     const firestore = await this.getFirestoreClient();

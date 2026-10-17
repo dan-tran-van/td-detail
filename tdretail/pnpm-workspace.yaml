@@ -1,6 +1,8 @@
 allowBuilds:
   '@firebase/util': true
   '@google/genai': true
+  '@vgpu/adapter-node': true
   protobufjs: true
   sharp: false
   unrs-resolver: false
+  webgpu: true
