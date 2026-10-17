@@ -19,7 +19,13 @@ export async function POST(
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
     }
 
-    if (conversation.customerId !== customer.id && conversation.customerEmail !== customer.email) {
+    const isOwner =
+      conversation.customerId === customer.id ||
+      conversation.customerEmail?.toLowerCase() === customer.email?.toLowerCase() ||
+      (body.customerEmail && conversation.customerEmail?.toLowerCase() === body.customerEmail.trim().toLowerCase()) ||
+      (body.customerId && conversation.customerId === body.customerId);
+
+    if (!isOwner) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 

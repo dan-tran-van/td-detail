@@ -128,10 +128,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       setOrders(loadedOrders);
 
-      // Auto-sync visitor demo orders to TD Retail platform in background
-      personalizedSeedOrders.forEach((order) => {
+      // Auto-sync all loaded orders (including checkout orders) to TD Retail platform in background
+      loadedOrders.forEach((order) => {
         syncOrderToTDRetail(order).catch((err) => {
-          console.debug('[OrderContext] Demo order sync background notice:', err);
+          console.debug('[OrderContext] Order sync background notice:', err);
         });
       });
     } catch (e) {
@@ -153,6 +153,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
   const saveOrder = (order: Order) => {
     setOrders((prev) => [order, ...prev.filter((o) => o.orderId !== order.orderId)]);
+    syncOrderToTDRetail(order).catch((err) => {
+      console.debug('[OrderContext] saveOrder sync error:', err);
+    });
   };
 
   const getOrderById = (orderId: string) => {

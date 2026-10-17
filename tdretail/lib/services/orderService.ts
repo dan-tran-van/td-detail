@@ -70,9 +70,12 @@ export class OrderService {
     }
 
     // Security Check 2: Customer ownership check
+    const normalizedEmail = (customerEmail || '').trim().toLowerCase();
+    const orderCustomerEmail = (order.customerEmail || '').trim().toLowerCase();
     const isMatchingEmail =
-      order.customerEmail.toLowerCase() === customerEmail.toLowerCase();
-    const isMatchingCustomer = order.customerId === customerId;
+      normalizedEmail.length > 0 && orderCustomerEmail === normalizedEmail;
+    const isMatchingCustomer =
+      Boolean(customerId) && order.customerId === customerId;
 
     if (!isMatchingEmail && !isMatchingCustomer) {
       return {

@@ -34,6 +34,7 @@ import {
 } from '@/lib/api-sync';
 import { SupportMessage, SupportConversation } from '@/lib/types';
 import { useVisitor } from '@/context/VisitorContext';
+import { useOrders } from '@/context/OrderContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -50,6 +51,7 @@ export function SupportChatWidget({
   initialOrderId,
 }: SupportChatWidgetProps) {
   const { visitor } = useVisitor();
+  const { getOrderById } = useOrders();
   const [conversation, setConversation] = useState<SupportConversation | null>(null);
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [inputText, setInputText] = useState('');
@@ -87,8 +89,11 @@ export function SupportChatWidget({
       ? `Hello, I need assistance and order verification for my order #${orderId}.`
       : 'Hello, I have a question about your lossless audio licenses and master stems.';
 
+    const matchedOrder = orderId ? getOrderById(orderId) : undefined;
+
     const result = await createSupportSession({
       orderId,
+      order: matchedOrder,
       subject,
       initialMessage,
       customerEmail: visitor.email,
@@ -139,7 +144,11 @@ export function SupportChatWidget({
 
     setMessages((prev) => [...prev, optimisticMsg]);
 
-    const result = await sendFollowupMessage(conversation.id, userText);
+    const result = await sendFollowupMessage(conversation.id, userText, {
+      email: visitor.email,
+      id: visitor.id,
+      name: visitor.name,
+    });
 
     if (result.success && result.aiReply) {
       setMessages((prev) => [...prev, result.aiReply!]);

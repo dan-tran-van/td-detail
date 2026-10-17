@@ -35,8 +35,18 @@ export async function GET(
       );
     }
 
+    const { searchParams } = new URL(_req.url);
+    const queryEmail = searchParams.get('customerEmail')?.trim().toLowerCase();
+    const queryCustomerId = searchParams.get('customerId');
+
     // Security check: Customer can only view their own conversations
-    if (conversation.customerId !== customer.id && conversation.customerEmail !== customer.email) {
+    const isOwner =
+      conversation.customerId === customer.id ||
+      conversation.customerEmail?.toLowerCase() === customer.email?.toLowerCase() ||
+      (queryEmail && conversation.customerEmail?.toLowerCase() === queryEmail) ||
+      (queryCustomerId && conversation.customerId === queryCustomerId);
+
+    if (!isOwner) {
       return NextResponse.json(
         { error: 'Access denied to this conversation thread' },
         {

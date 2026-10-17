@@ -39,12 +39,17 @@ export async function syncOrderToTDRetail(order: Order): Promise<{ success: bool
  */
 export async function createSupportSession(params: {
   orderId?: string;
+  order?: Order;
   subject: string;
   initialMessage: string;
   customerEmail: string;
   customerName: string;
 }): Promise<{ success: boolean; conversation?: SupportConversation; initialAiReply?: SupportMessage; error?: string }> {
   try {
+    if (params.order) {
+      await syncOrderToTDRetail(params.order).catch(() => {});
+    }
+
     const res = await fetch(`${TD_RETAIL_API_URL}/api/conversations`, {
       method: 'POST',
       headers: {
@@ -52,7 +57,7 @@ export async function createSupportSession(params: {
       },
       body: JSON.stringify({
         merchantId: MERCHANT_ID,
-        orderId: params.orderId || undefined,
+        orderId: params.orderId || params.order?.orderId || undefined,
         subject: params.subject,
         initialMessage: params.initialMessage,
         customerEmail: params.customerEmail,
@@ -81,13 +86,17 @@ export async function createSupportSession(params: {
 /**
  * Fetch messages in an existing conversation thread.
  */
-export async function fetchConversationThread(conversationId: string): Promise<{
+export async function fetchConversationThread(
+  conversationId: string,
+  customerEmail?: string
+): Promise<{
   conversation?: SupportConversation;
   messages: SupportMessage[];
   error?: string;
 }> {
   try {
-    const res = await fetch(`${TD_RETAIL_API_URL}/api/conversations/${conversationId}`);
+    const query = customerEmail ? `?customerEmail=${encodeURIComponent(customerEmail)}` : '';
+    const res = await fetch(`${TD_RETAIL_API_URL}/api/conversations/${conversationId}${query}`);
     if (!res.ok) {
       return { messages: [], error: 'Could not load conversation' };
     }
@@ -106,7 +115,8 @@ export async function fetchConversationThread(conversationId: string): Promise<{
  */
 export async function sendFollowupMessage(
   conversationId: string,
-  messageContent: string
+  messageContent: string,
+  customer?: { email?: string; id?: string; name?: string }
 ): Promise<{ success: boolean; aiReply?: SupportMessage; error?: string }> {
   try {
     const res = await fetch(`${TD_RETAIL_API_URL}/api/conversations/${conversationId}/messages`, {
@@ -116,6 +126,9 @@ export async function sendFollowupMessage(
       },
       body: JSON.stringify({
         content: messageContent,
+        customerEmail: customer?.email,
+        customerId: customer?.id,
+        customerName: customer?.name,
       }),
     });
 

@@ -247,7 +247,6 @@ CRITICAL RULES:
         },
       });
 
-      // Extract text from parts directly in case .text getter is undefined
       const followupCandidate = followupResponse.candidates?.[0];
       const textParts = followupCandidate?.content?.parts?.filter((p: any) => p.text)?.map((p: any) => p.text).join('\n') || '';
       finalContent = followupResponse.text || textParts;
@@ -263,7 +262,8 @@ CRITICAL RULES:
         }
       }
     } else {
-      finalContent = response.text || "Thank you for reaching out. How can I assist you today?";
+      const firstTextParts = firstCandidate?.content?.parts?.filter((p: any) => p.text)?.map((p: any) => p.text).join('\n') || '';
+      finalContent = response.text || firstTextParts || "Thank you for reaching out. How can I assist you today?";
     }
 
     const aiMessage: Message = {
