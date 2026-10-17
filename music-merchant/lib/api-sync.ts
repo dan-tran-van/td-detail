@@ -1,24 +1,65 @@
 import { Order, SupportConversation, SupportMessage } from './types';
 
-const TD_RETAIL_API_URL =
-  process.env.NEXT_PUBLIC_TD_RETAIL_API_URL || 'http://localhost:3000';
+declare global {
+  interface Window {
+    __TD_CONFIG?: {
+      tdRetailApiUrl?: string;
+      merchantId?: string;
+    };
+  }
+}
 
-const MERCHANT_ID =
-  process.env.NEXT_PUBLIC_MERCHANT_ID || 'merchant_music';
+export function getTDRetailPortalUrl(): string {
+  if (typeof window !== 'undefined') {
+    if (window.__TD_CONFIG?.tdRetailApiUrl) {
+      return window.__TD_CONFIG.tdRetailApiUrl;
+    }
+    // If the browser is running on Cloud Run (*.run.app), default to the sibling tdretail Cloud Run domain!
+    if (window.location.hostname.includes('.run.app')) {
+      const liveUrl = process.env.NEXT_PUBLIC_TD_RETAIL_API_URL;
+      if (liveUrl && !liveUrl.includes('localhost')) {
+        return liveUrl.replace(/\/+$/, '');
+      }
+      return 'https://tdretail-215785827581.asia-southeast1.run.app';
+    }
+  }
+
+  const url =
+    process.env.NEXT_PUBLIC_TD_RETAIL_API_URL ||
+    process.env.TD_RETAIL_API_URL ||
+    'http://localhost:3000';
+  return url.replace(/\/+$/, '');
+}
+
+function getTDRetailApiBase(): string {
+  return `${getTDRetailPortalUrl()}/api`;
+}
+
+function getMerchantId(): string {
+  if (typeof window !== 'undefined' && window.__TD_CONFIG?.merchantId) {
+    return window.__TD_CONFIG.merchantId;
+  }
+  return (
+    process.env.NEXT_PUBLIC_MERCHANT_ID ||
+    process.env.MERCHANT_ID ||
+    'merchant_music'
+  );
+}
 
 /**
  * Sync an order created in music-merchant to the central TD Retail platform API.
  */
 export async function syncOrderToTDRetail(order: Order): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await fetch(`${TD_RETAIL_API_URL}/api/orders`, {
+    const apiBase = getTDRetailApiBase();
+    const res = await fetch(`${apiBase}/orders`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         ...order,
-        merchantId: MERCHANT_ID,
+        merchantId: getMerchantId(),
       }),
     });
 
@@ -50,13 +91,14 @@ export async function createSupportSession(params: {
       await syncOrderToTDRetail(params.order).catch(() => {});
     }
 
-    const res = await fetch(`${TD_RETAIL_API_URL}/api/conversations`, {
+    const apiBase = getTDRetailApiBase();
+    const res = await fetch(`${apiBase}/conversations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        merchantId: MERCHANT_ID,
+        merchantId: getMerchantId(),
         orderId: params.orderId || params.order?.orderId || undefined,
         subject: params.subject,
         initialMessage: params.initialMessage,
@@ -95,8 +137,9 @@ export async function fetchConversationThread(
   error?: string;
 }> {
   try {
+    const apiBase = getTDRetailApiBase();
     const query = customerEmail ? `?customerEmail=${encodeURIComponent(customerEmail)}` : '';
-    const res = await fetch(`${TD_RETAIL_API_URL}/api/conversations/${conversationId}${query}`);
+    const res = await fetch(`${apiBase}/conversations/${conversationId}${query}`);
     if (!res.ok) {
       return { messages: [], error: 'Could not load conversation' };
     }
@@ -119,7 +162,8 @@ export async function sendFollowupMessage(
   customer?: { email?: string; id?: string; name?: string }
 ): Promise<{ success: boolean; aiReply?: SupportMessage; error?: string }> {
   try {
-    const res = await fetch(`${TD_RETAIL_API_URL}/api/conversations/${conversationId}/messages`, {
+    const apiBase = getTDRetailApiBase();
+    const res = await fetch(`${apiBase}/conversations/${conversationId}/messages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

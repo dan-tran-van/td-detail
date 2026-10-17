@@ -27,8 +27,27 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const runtimeApiUrl =
+    process.env.NEXT_PUBLIC_TD_RETAIL_API_URL ||
+    process.env.TD_RETAIL_API_URL ||
+    (typeof process.env.K_SERVICE !== 'undefined'
+      ? 'https://tdretail-215785827581.asia-southeast1.run.app'
+      : 'http://localhost:3000');
+
+  const runtimeMerchantId =
+    process.env.NEXT_PUBLIC_MERCHANT_ID ||
+    process.env.MERCHANT_ID ||
+    'merchant_music';
+
   return (
     <html lang="en" className={cn("dark", "font-sans", inter.variable)}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__TD_CONFIG = { tdRetailApiUrl: ${JSON.stringify(runtimeApiUrl.replace(/\/+$/, ''))}, merchantId: ${JSON.stringify(runtimeMerchantId)} };`,
+          }}
+        />
+      </head>
       <body className={`${inter.variable} ${geistMono.variable} font-sans antialiased min-h-screen flex flex-col bg-background text-foreground`}>
         <TooltipProvider>
           <VisitorProvider>
@@ -51,7 +70,7 @@ export default function RootLayout({
                     <span>Connected to TD Retail Platform API</span>
                     <span>•</span>
                     <a
-                      href={`${process.env.NEXT_PUBLIC_TD_RETAIL_API_URL || 'http://localhost:3000'}/chat/conv_music_01`}
+                      href={`${runtimeApiUrl.replace(/\/+$/, '')}/chat/conv_music_01`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="underline hover:text-foreground transition-colors"
