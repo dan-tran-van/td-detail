@@ -11,17 +11,24 @@ import { Badge } from '@/components/ui/badge';
 
 function ShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  // Hide global navbar and footer on chat pages, inbox, and outbox
-  const isFullAppPage =
+  const isChatAppPage =
     pathname?.startsWith('/chat') ||
-    pathname?.startsWith('/inbox') ||
-    pathname?.startsWith('/outbox');
+    pathname?.startsWith('/inbox');
 
-  if (isFullAppPage) {
+  if (isChatAppPage) {
     return (
       <ModernAppShell>
         {children}
       </ModernAppShell>
+    );
+  }
+
+  // The Outbox has its own full-screen standalone mail client layout (own topbar, navigation, persona switcher)
+  if (pathname?.startsWith('/outbox')) {
+    return (
+      <main className="h-screen w-screen overflow-hidden flex flex-col">
+        {children}
+      </main>
     );
   }
 
@@ -90,7 +97,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
                 <li>
                   <NextLink href="/outbox" className="hover:text-foreground transition-colors flex items-center gap-1.5">
                     <Terminal className="h-3 w-3" />
-                    Webhook Simulator
+                    Email Delivery (SendGrid)
                   </NextLink>
                 </li>
               </ul>

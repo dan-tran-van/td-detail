@@ -33,6 +33,11 @@ import {
   sendFollowupMessage,
 } from '@/lib/api-sync';
 import { SupportMessage, SupportConversation } from '@/lib/types';
+import { useVisitor } from '@/context/VisitorContext';
+import { useOrders } from '@/context/OrderContext';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 
 interface SupportChatWidgetProps {
   isOpen: boolean;
@@ -45,6 +50,8 @@ export function SupportChatWidget({
   onClose,
   initialOrderId,
 }: SupportChatWidgetProps) {
+  const { visitor } = useVisitor();
+  const { getOrderById } = useOrders();
   const [conversation, setConversation] = useState<SupportConversation | null>(null);
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [inputText, setInputText] = useState('');
@@ -82,12 +89,15 @@ export function SupportChatWidget({
       ? `Hello, I need assistance and order verification for my order #${orderId}.`
       : 'Hello, I have a question about your lossless audio licenses and master stems.';
 
+    const matchedOrder = orderId ? getOrderById(orderId) : undefined;
+
     const result = await createSupportSession({
       orderId,
+      order: matchedOrder,
       subject,
       initialMessage,
-      customerEmail: 'sarah.connor@example.com',
-      customerName: 'Sarah Connor',
+      customerEmail: visitor.email,
+      customerName: visitor.name,
     });
 
     if (result.success && result.conversation) {
@@ -97,7 +107,7 @@ export function SupportChatWidget({
           id: `msg_cust_${Date.now()}`,
           conversationId: result.conversation.id,
           sender: 'customer',
-          senderName: 'Sarah Connor',
+          senderName: visitor.name,
           content: initialMessage,
           timestamp: new Date().toISOString(),
         },
@@ -127,14 +137,18 @@ export function SupportChatWidget({
       id: `msg_cust_${Date.now()}`,
       conversationId: conversation.id,
       sender: 'customer',
-      senderName: 'Sarah Connor',
+      senderName: visitor.name,
       content: userText,
       timestamp: new Date().toISOString(),
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
 
-    const result = await sendFollowupMessage(conversation.id, userText);
+    const result = await sendFollowupMessage(conversation.id, userText, {
+      email: visitor.email,
+      id: visitor.id,
+      name: visitor.name,
+    });
 
     if (result.success && result.aiReply) {
       setMessages((prev) => [...prev, result.aiReply!]);
@@ -224,7 +238,15 @@ export function SupportChatWidget({
                     <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
 
-                  <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                  {isCustomer ? (
+                    <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                  ) : (
+                    <div className="prose prose-sm dark:prose-invert max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_p]:my-1.5 [&_ul]:my-2 [&_ul]:pl-4 [&_ul]:list-disc [&_ol]:my-2 [&_ol]:pl-4 [&_ol]:list-decimal [&_li]:my-0.5 [&_code]:bg-muted/80 [&_code]:text-foreground [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-[11px] [&_code]:font-mono [&_code]:border [&_code]:border-border/60 [&_pre]:bg-muted/90 [&_pre]:p-2.5 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-primary [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:my-2 [&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-border [&_th]:p-1.5 [&_th]:bg-muted/50 [&_th]:text-left [&_td]:border [&_td]:border-border [&_td]:p-1.5 [&_strong]:font-semibold [&_strong]:text-foreground [&_h1]:text-base [&_h1]:font-bold [&_h1]:my-2 [&_h2]:text-sm [&_h2]:font-bold [&_h2]:my-2 [&_h3]:text-xs [&_h3]:font-bold [&_h3]:my-1.5 [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 hover:[&_a]:opacity-80">
+                      <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
+                  )}
 
                   {/* Grounding metadata pill */}
                   {msg.metadata?.isAiGrounded && (
@@ -293,8 +315,8 @@ export function SupportChatWidget({
             <a
               href={
                 conversation?.id
-                  ? `${process.env.NEXT_PUBLIC_TD_RETAIL_API_URL || 'http://localhost:3000'}/chat/${conversation.id}`
-                  : `${process.env.NEXT_PUBLIC_TD_RETAIL_API_URL || 'http://localhost:3000'}/inbox`
+                  ? `${process.env.NEXT_PUBLIC_TD_RETAIL_API_URL || 'http://localhost:3000'}/chat/${conversation.id}?customerEmail=${encodeURIComponent(visitor.email)}&customerName=${encodeURIComponent(visitor.name)}&customerId=${encodeURIComponent(visitor.id)}`
+                  : `${process.env.NEXT_PUBLIC_TD_RETAIL_API_URL || 'http://localhost:3000'}/inbox?customerEmail=${encodeURIComponent(visitor.email)}&customerName=${encodeURIComponent(visitor.name)}&customerId=${encodeURIComponent(visitor.id)}`
               }
               target="_blank"
               rel="noopener noreferrer"

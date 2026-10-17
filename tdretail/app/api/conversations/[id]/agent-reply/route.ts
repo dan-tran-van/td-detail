@@ -26,7 +26,7 @@ export async function POST(
     const now = new Date().toISOString();
 
     const humanMsg: Message = {
-      id: `msg_human_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: `msg_human_${crypto.randomUUID()}`,
       conversationId: id,
       sender: 'human_agent',
       senderName: agentName || `${merchantName} Support Specialist`,

@@ -11,7 +11,6 @@ import {
   FileText,
   Trash2,
   AlertCircle,
-  Archive,
   RefreshCw,
   Search,
   ChevronLeft,
@@ -26,7 +25,12 @@ import {
   CheckCircle2,
   Tag,
   Paperclip,
+  X,
+  PanelLeft,
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -53,12 +57,15 @@ export default function GmailStyleOutboxPage() {
   const [selectedEmail, setSelectedEmail] = useState<OutboxEmail | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFolder, setActiveFolder] = useState<'sent' | 'all' | 'starred' | 'drafts'>('sent');
+  const [activeFolder, setActiveFolder] = useState<'sent' | 'all' | 'starred'>('sent');
+  const [showAllSystemEmails, setShowAllSystemEmails] = useState(false);
+  const [mailboxSidebarOpen, setMailboxSidebarOpen] = useState(true);
   const [starredIds, setStarredIds] = useState<Record<string, boolean>>({});
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [availableCustomers, setAvailableCustomers] = useState<Customer[]>([]);
   const [isPersonaDialogOpen, setIsPersonaDialogOpen] = useState(false);
   const [isSwitchingPersona, setIsSwitchingPersona] = useState(false);
+  const [totalSystemCount, setTotalSystemCount] = useState(0);
 
   // Reply simulation modal state
   const [isSimulating, setIsSimulating] = useState(false);
@@ -66,9 +73,38 @@ export default function GmailStyleOutboxPage() {
   const [submittingReply, setSubmittingReply] = useState(false);
   const [simStatus, setSimStatus] = useState<string | null>(null);
 
+  // Restore starred IDs and sidebar collapse state from localStorage
+  useEffect(() => {
+    try {
+      const savedStars = localStorage.getItem('tdretail_outbox_starred');
+      if (savedStars) {
+        setStarredIds(JSON.parse(savedStars));
+      }
+      const savedSidebar = localStorage.getItem('tdretail_outbox_sidebar');
+      if (savedSidebar !== null) {
+        setMailboxSidebarOpen(savedSidebar === 'true');
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  const handleToggleSidebar = () => {
+    setMailboxSidebarOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('tdretail_outbox_sidebar', String(next));
+      } catch (e) {
+        // ignore
+      }
+      return next;
+    });
+  };
+
   const loadSession = async () => {
     try {
-      const res = await fetch('/api/session');
+      const urlQuery = typeof window !== 'undefined' ? window.location.search : '';
+      const res = await fetch(`/api/session${urlQuery}`);
       if (res.ok) {
         const data = await res.json();
         setCustomer(data.customer);
@@ -94,7 +130,7 @@ export default function GmailStyleOutboxPage() {
           setCustomer(data.customer);
         }
         setIsPersonaDialogOpen(false);
-        window.location.reload();
+        await loadEmails();
       }
     } catch (e) {
       console.error('Error switching persona:', e);
@@ -106,10 +142,14 @@ export default function GmailStyleOutboxPage() {
   const loadEmails = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/outbox');
+      const url = showAllSystemEmails ? '/api/outbox?all=true' : '/api/outbox';
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setEmails(data.emails || []);
+        if (data.totalCount !== undefined) {
+          setTotalSystemCount(data.totalCount);
+        }
       }
     } catch (e) {
       console.error('Error fetching outbox:', e);
@@ -119,16 +159,27 @@ export default function GmailStyleOutboxPage() {
   };
 
   useEffect(() => {
-    loadEmails();
     loadSession();
   }, []);
 
+  useEffect(() => {
+    loadEmails();
+  }, [showAllSystemEmails]);
+
   const toggleStar = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    setStarredIds((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
+    setStarredIds((prev) => {
+      const updated = {
+        ...prev,
+        [id]: !prev[id],
+      };
+      try {
+        localStorage.setItem('tdretail_outbox_starred', JSON.stringify(updated));
+      } catch (err) {
+        // ignore
+      }
+      return updated;
+    });
   };
 
   const handleSimulateReply = (email: OutboxEmail) => {
@@ -147,10 +198,14 @@ export default function GmailStyleOutboxPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          conversationId: selectedEmail.conversationId,
+          replyText: replyText.trim(),
+          customerEmail: selectedEmail.to,
+          customSubject: `Re: ${selectedEmail.subject}`,
           fromEmail: selectedEmail.to,
           toEmail: selectedEmail.replyTo,
           subject: `Re: ${selectedEmail.subject}`,
-          bodyText: replyText,
+          bodyText: replyText.trim(),
         }),
       });
 
@@ -159,6 +214,7 @@ export default function GmailStyleOutboxPage() {
         setSimStatus('Reply delivered to SendGrid inbound webhook & routed to conversation thread.');
         setTimeout(() => {
           setIsSimulating(false);
+          loadEmails();
         }, 1500);
       } else {
         setSimStatus(data.error || 'Failed to simulate email reply');
@@ -189,54 +245,112 @@ export default function GmailStyleOutboxPage() {
   return (
     <div className="flex-1 flex flex-col h-screen w-screen bg-background overflow-hidden">
       {/* Gmail Top App Bar */}
-      <header className="h-16 border-b border-border/80 px-4 flex items-center justify-between gap-4 bg-card/60 backdrop-blur shrink-0">
-        {/* Brand / Title */}
-        <div className="flex items-center gap-3 w-64 shrink-0">
-          <div className="h-9 w-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
-            <Mail className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-base tracking-tight text-foreground">
-                TD Mail Outbox
-              </span>
-              <Badge variant="outline" className="text-[10px] h-4 px-1 text-muted-foreground">
-                SendGrid
-              </Badge>
+      <header className="min-h-16 border-b border-border/80 px-3 sm:px-4 py-2 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 sm:gap-4 bg-card/60 backdrop-blur shrink-0">
+        {/* Brand / Title + Sidebar Toggle */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={handleToggleSidebar}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer flex items-center justify-center shrink-0"
+            title={mailboxSidebarOpen ? "Collapse mailbox sidebar" : "Expand mailbox sidebar"}
+            aria-label={mailboxSidebarOpen ? "Collapse mailbox sidebar" : "Expand mailbox sidebar"}
+          >
+            <PanelLeft className="h-4 w-4" />
+          </button>
+
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
+              <Mail className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <p className="text-[11px] text-muted-foreground">Simulated Webmail Client</p>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-sm sm:text-base tracking-tight text-foreground">
+                  TD Mail Outbox
+                </span>
+                <Badge variant="outline" className="text-[9px] sm:text-[10px] h-4 px-1 text-muted-foreground">
+                  SendGrid
+                </Badge>
+              </div>
+              <p className="text-[10px] sm:text-[11px] text-muted-foreground hidden sm:block">Customer Notification Inbox</p>
+            </div>
           </div>
         </div>
 
         {/* Gmail Search Bar */}
-        <div className="flex-1 max-w-2xl relative">
-          <Search className="h-4 w-4 absolute left-3.5 top-3 text-muted-foreground" />
+        <div className="flex-1 min-w-[200px] max-w-2xl relative order-last sm:order-none w-full sm:w-auto">
+          <Search className="h-4 w-4 absolute left-3.5 top-3 text-muted-foreground pointer-events-none" />
           <Input
             type="text"
             placeholder="Search mail by recipient, merchant, or subject..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 pl-10 pr-4 rounded-full bg-muted/60 border-border/80 focus-visible:bg-background text-xs"
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              if (selectedEmail) setSelectedEmail(null);
+            }}
+            className="w-full h-10 pl-10 pr-9 rounded-full bg-muted/60 border-border/80 focus-visible:bg-background text-xs"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-3 text-muted-foreground hover:text-foreground p-0.5 rounded-full"
+              title="Clear search"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2">
+        {/* Action Controls & Persona Filter */}
+        <div className="flex items-center gap-1.5 sm:gap-2 ml-auto sm:ml-0">
+          {/* Persona / All Mail Toggle */}
+          <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/50 text-[11px]">
+            <button
+              type="button"
+              onClick={() => {
+                setShowAllSystemEmails(false);
+                setSelectedEmail(null);
+              }}
+              className={`px-2 py-1 rounded-md font-medium transition-colors ${
+                !showAllSystemEmails
+                  ? 'bg-background text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              My Mail
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAllSystemEmails(true);
+                setSelectedEmail(null);
+              }}
+              className={`px-2 py-1 rounded-md font-medium transition-colors ${
+                showAllSystemEmails
+                  ? 'bg-background text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              title="View all outgoing emails across all shoppers"
+            >
+              All Outbox ({totalSystemCount})
+            </button>
+          </div>
+
           <Button
             variant="outline"
             size="sm"
             onClick={loadEmails}
             disabled={loading}
-            className="h-8 gap-1.5 text-xs rounded-lg"
+            className="h-8 gap-1.5 text-xs rounded-lg px-2 sm:px-3"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Refresh</span>
           </Button>
 
           <NextLink href="/inbox">
-            <Button size="sm" variant="secondary" className="h-8 gap-1.5 text-xs rounded-lg">
+            <Button size="sm" variant="secondary" className="h-8 gap-1.5 text-xs rounded-lg px-2 sm:px-3">
               <Inbox className="h-3.5 w-3.5" />
-              <span>Back to Chat Inbox</span>
+              <span className="hidden sm:inline">Back to Chat</span>
             </Button>
           </NextLink>
 
@@ -244,8 +358,8 @@ export default function GmailStyleOutboxPage() {
           <button
             type="button"
             onClick={() => setIsPersonaDialogOpen(true)}
-            className="flex items-center gap-2 p-1 pl-2 pr-2.5 rounded-full hover:bg-muted/80 border border-border transition-colors text-left outline-none cursor-pointer"
-            title="Click to Switch Demo Persona"
+            className="flex items-center gap-1.5 p-1 pl-1.5 pr-2 rounded-full hover:bg-muted/80 border border-border transition-colors text-left outline-none cursor-pointer"
+            title="Switch Persona to filter Outbox for another customer"
           >
             <Avatar className="h-6 w-6 border border-border">
               <AvatarImage src={customer?.avatarUrl} />
@@ -253,7 +367,7 @@ export default function GmailStyleOutboxPage() {
                 {customer?.name?.charAt(0) || 'C'}
               </AvatarFallback>
             </Avatar>
-            <span className="text-xs font-semibold text-foreground hidden md:inline max-w-[100px] truncate">
+            <span className="text-xs font-semibold text-foreground hidden md:inline max-w-[90px] truncate">
               {customer?.name || 'Customer'}
             </span>
             <Badge variant="outline" className="text-[9px] h-3.5 px-1 font-normal text-muted-foreground">
@@ -265,13 +379,19 @@ export default function GmailStyleOutboxPage() {
 
       {/* Gmail Body Layout: Left Sidebar + Mail List / Detail View */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Mail Folders Sidebar */}
-        <aside className="w-56 border-r border-border/80 bg-card/30 p-3 flex flex-col gap-1 shrink-0">
-          <div className="pb-2 mb-1 border-b border-border/60">
-            <div className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Mailbox
+        {/* Left Mail Folders Sidebar (collapsible with transition) */}
+        <aside
+          className={`border-r border-border/80 bg-card/30 p-2 sm:p-3 flex flex-col gap-1 shrink-0 transition-all duration-200 ${
+            mailboxSidebarOpen ? 'w-48 sm:w-56' : 'w-14 items-center'
+          }`}
+        >
+          {mailboxSidebarOpen && (
+            <div className="pb-2 mb-1 border-b border-border/60">
+              <div className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Mailbox
+              </div>
             </div>
-          </div>
+          )}
 
           <Button
             variant={activeFolder === 'sent' ? 'secondary' : 'ghost'}
@@ -280,11 +400,18 @@ export default function GmailStyleOutboxPage() {
               setActiveFolder('sent');
               setSelectedEmail(null);
             }}
-            className="w-full justify-start gap-3 h-9 text-xs rounded-full px-3 font-medium"
+            title="Sent Messages"
+            className={`w-full h-9 text-xs rounded-full px-3 font-medium ${
+              mailboxSidebarOpen ? 'justify-start gap-3' : 'justify-center p-0 size-9'
+            }`}
           >
-            <Send className="h-4 w-4 text-primary" />
-            <span className="flex-1 text-left">Sent Messages</span>
-            <span className="text-[11px] text-muted-foreground">{emails.length}</span>
+            <Send className="h-4 w-4 text-primary shrink-0" />
+            {mailboxSidebarOpen && (
+              <>
+                <span className="flex-1 text-left">Sent Messages</span>
+                <span className="text-[11px] text-muted-foreground">{emails.length}</span>
+              </>
+            )}
           </Button>
 
           <Button
@@ -294,11 +421,18 @@ export default function GmailStyleOutboxPage() {
               setActiveFolder('all');
               setSelectedEmail(null);
             }}
-            className="w-full justify-start gap-3 h-9 text-xs rounded-full px-3"
+            title="All Mail"
+            className={`w-full h-9 text-xs rounded-full px-3 ${
+              mailboxSidebarOpen ? 'justify-start gap-3' : 'justify-center p-0 size-9'
+            }`}
           >
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <span className="flex-1 text-left">All Mail</span>
-            <span className="text-[11px] text-muted-foreground">{emails.length}</span>
+            <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+            {mailboxSidebarOpen && (
+              <>
+                <span className="flex-1 text-left">All Mail</span>
+                <span className="text-[11px] text-muted-foreground">{emails.length}</span>
+              </>
+            )}
           </Button>
 
           <Button
@@ -308,37 +442,35 @@ export default function GmailStyleOutboxPage() {
               setActiveFolder('starred');
               setSelectedEmail(null);
             }}
-            className="w-full justify-start gap-3 h-9 text-xs rounded-full px-3"
+            title="Starred Messages"
+            className={`w-full h-9 text-xs rounded-full px-3 ${
+              mailboxSidebarOpen ? 'justify-start gap-3' : 'justify-center p-0 size-9'
+            }`}
           >
-            <Star className="h-4 w-4 text-amber-500 fill-amber-500/20" />
-            <span className="flex-1 text-left">Starred</span>
-            <span className="text-[11px] text-muted-foreground">
-              {Object.values(starredIds).filter(Boolean).length}
-            </span>
+            <Star className="h-4 w-4 text-amber-500 fill-amber-500/20 shrink-0" />
+            {mailboxSidebarOpen && (
+              <>
+                <span className="flex-1 text-left">Starred</span>
+                <span className="text-[11px] text-muted-foreground">
+                  {Object.values(starredIds).filter(Boolean).length}
+                </span>
+              </>
+            )}
           </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled
-            className="w-full justify-start gap-3 h-9 text-xs rounded-full px-3 text-muted-foreground/50 opacity-60"
-          >
-            <FileText className="h-4 w-4" />
-            <span className="flex-1 text-left">Drafts</span>
-            <span className="text-[11px]">0</span>
-          </Button>
-
-          <div className="mt-auto pt-4 border-t border-border/60">
-            <div className="p-2.5 rounded-xl border border-border bg-muted/40 text-[11px] space-y-1 text-muted-foreground">
-              <span className="font-semibold text-foreground block flex items-center gap-1">
-                <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-                Inbound Webhook
-              </span>
-              <p className="leading-relaxed">
-                Click <strong>"Simulate Reply"</strong> on any email to test customer response routing via SendGrid.
-              </p>
+          {mailboxSidebarOpen && (
+            <div className="mt-auto pt-4 border-t border-border/60">
+              <div className="p-2.5 rounded-xl border border-border bg-muted/40 text-[11px] space-y-1 text-muted-foreground">
+                <span className="font-semibold text-foreground block flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+                  Inbound Webhook
+                </span>
+                <p className="leading-relaxed">
+                  Click <strong>"Reply via Email"</strong> on any email to test customer response routing via SendGrid.
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </aside>
 
         {/* Main Content Area */}
@@ -361,17 +493,8 @@ export default function GmailStyleOutboxPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setSelectedEmail(null)}
-                    title="Archive"
-                    className="h-8 w-8 text-muted-foreground"
-                  >
-                    <Archive className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
                     onClick={() => handleSimulateReply(selectedEmail)}
-                    title="Reply"
+                    title="Reply via Email"
                     className="h-8 w-8 text-muted-foreground hover:text-primary"
                   >
                     <CornerUpLeft className="h-4 w-4" />
@@ -385,7 +508,7 @@ export default function GmailStyleOutboxPage() {
                     className="h-7 text-xs gap-1.5"
                   >
                     <CornerUpLeft className="h-3.5 w-3.5" />
-                    <span>Simulate Reply</span>
+                    <span>Reply via Email</span>
                   </Button>
 
                   <NextLink href={`/chat/${selectedEmail.conversationId}`}>
@@ -456,8 +579,10 @@ export default function GmailStyleOutboxPage() {
                       className="prose prose-sm dark:prose-invert max-w-none text-xs sm:text-sm leading-relaxed"
                     />
                   ) : (
-                    <div className="whitespace-pre-wrap font-sans text-xs sm:text-sm text-foreground leading-relaxed">
-                      {selectedEmail.bodyText}
+                    <div className="prose prose-sm dark:prose-invert max-w-none text-xs sm:text-sm leading-relaxed">
+                      <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                        {selectedEmail.bodyText}
+                      </ReactMarkdown>
                     </div>
                   )}
                 </div>
@@ -526,32 +651,32 @@ export default function GmailStyleOutboxPage() {
                         </button>
 
                         {/* Recipient / Merchant */}
-                        <div className="w-48 sm:w-56 shrink-0 flex items-center gap-2 truncate">
+                        <div className="w-28 sm:w-48 md:w-56 shrink-0 flex items-center gap-2 truncate">
                           {isMusic ? (
                             <Disc className="h-3.5 w-3.5 text-primary shrink-0" />
                           ) : (
                             <ShoppingBag className="h-3.5 w-3.5 text-primary shrink-0" />
                           )}
-                          <span className="font-semibold text-foreground truncate">
+                          <span className="font-semibold text-foreground truncate text-xs">
                             {email.merchantName}
                           </span>
-                          <span className="text-[11px] text-muted-foreground truncate hidden md:inline">
+                          <span className="text-[11px] text-muted-foreground truncate hidden lg:inline">
                             to {email.to}
                           </span>
                         </div>
 
                         {/* Subject & Snippet */}
                         <div className="flex-1 min-w-0 flex items-center gap-2">
-                          <span className="font-medium text-foreground truncate">
+                          <span className="font-medium text-foreground truncate text-xs">
                             {email.subject}
                           </span>
-                          <span className="text-muted-foreground text-[11px] truncate hidden sm:inline">
+                          <span className="text-muted-foreground text-[11px] truncate hidden md:inline">
                             - {email.bodyText}
                           </span>
                         </div>
 
                         {/* Date / Time */}
-                        <div className="w-24 text-right text-[11px] text-muted-foreground shrink-0 group-hover:text-foreground font-mono">
+                        <div className="text-right text-[10px] sm:text-[11px] text-muted-foreground shrink-0 group-hover:text-foreground font-mono">
                           {new Date(email.sentAt).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -573,7 +698,7 @@ export default function GmailStyleOutboxPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CornerUpLeft className="h-5 w-5 text-primary" />
-              <span>Simulate Customer Email Reply</span>
+              <span>Send Inbound Email Reply</span>
             </DialogTitle>
             <DialogDescription>
               Test SendGrid Inbound Parse reply ingestion into the conversation thread.
@@ -623,7 +748,7 @@ export default function GmailStyleOutboxPage() {
                 ) : (
                   <Send className="h-3.5 w-3.5" />
                 )}
-                <span>Send Inbound Reply Webhook</span>
+                <span>Send Email Reply</span>
               </Button>
             </div>
           </div>

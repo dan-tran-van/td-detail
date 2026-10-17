@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import NextLink from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -17,7 +17,10 @@ import {
   User,
   AlertTriangle,
   ChevronDown,
+  PanelLeft,
+  PanelLeftClose,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -69,45 +72,35 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
     ? pathname.split('/chat/')[1]?.split('/')[0]
     : undefined;
 
-  // Sidebar expanded state: initialize from cookie
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    try {
-      const cookieVal = getCookie('sidebar_state');
-      if (cookieVal !== undefined && cookieVal !== null) {
-        return String(cookieVal) === 'true';
-      }
-      const legacyVal = getCookie('tdretail_sidebar_open');
-      if (legacyVal !== undefined && legacyVal !== null) {
-        return String(legacyVal) === 'true';
-      }
-    } catch (e) {
-      // fallback
-    }
-    return true;
-  });
+  // Sidebar state
+  const [mounted, setMounted] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
 
-  // Sync sidebar state from cookie after client-side hydration.
-  // The useState initializer runs during SSR where window is undefined,
-  // so the cookie is never read there. This effect corrects the mismatch
-  // after mount to avoid the flash caused by remounting on every navigation.
-  useEffect(() => {
+  // Restore saved collapse state on client mount before paint
+  useLayoutEffect(() => {
     try {
-      const cookieVal = getCookie('sidebar_state');
-      if (cookieVal !== undefined && cookieVal !== null) {
-        setSidebarOpen(String(cookieVal) === 'true');
+      const localVal = localStorage.getItem('sidebar_state');
+      if (localVal !== null) {
+        setSidebarOpen(localVal === 'true');
+      } else {
+        const cookieMatch = document.cookie.match(/(?:^|;\s*)sidebar_state=([^;]*)/);
+        if (cookieMatch) {
+          setSidebarOpen(cookieMatch[1] === 'true');
+        }
       }
     } catch (e) {
       // ignore
+    } finally {
+      setMounted(true);
     }
   }, []);
-
 
   const handleOpenChange = (open: boolean) => {
     setSidebarOpen(open);
     try {
-      setCookie('sidebar_state', String(open), { maxAge: 60 * 60 * 24 * 365, path: '/' });
-      setCookie('tdretail_sidebar_open', String(open), { maxAge: 60 * 60 * 24 * 365, path: '/' });
+      localStorage.setItem('sidebar_state', String(open));
+      document.cookie = `sidebar_state=${open}; path=/; max-age=${60 * 60 * 24 * 365}`;
+      document.cookie = `tdretail_sidebar_open=${open}; path=/; max-age=${60 * 60 * 24 * 365}`;
     } catch (e) {
       // ignore
     }
@@ -133,8 +126,9 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
 
   const fetchData = async () => {
     try {
-      // 1. Session
-      const sessRes = await fetch('/api/session');
+      // 1. Session - Pass any customerEmail/customerId query params from external links
+      const urlQuery = typeof window !== 'undefined' ? window.location.search : '';
+      const sessRes = await fetch(`/api/session${urlQuery}`);
       if (sessRes.ok) {
         const sData = await sessRes.json();
         setCustomer(sData.customer);
@@ -268,20 +262,34 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
     <SidebarProvider
       open={sidebarOpen}
       onOpenChange={handleOpenChange}
-      className="h-screen w-screen overflow-hidden"
+      className={cn("h-screen w-screen overflow-hidden", !mounted && "[&_*]:transition-none!")}
     >
       <Sidebar collapsible="icon" className="border-r border-border">
-        {/* Sidebar Header: New Inquiry + Nav Links */}
-        <SidebarHeader className="border-b border-border/80 gap-0 pb-2">
+        {/* Sidebar Header: Brand / Toggle + New Inquiry + Nav Links */}
+        <SidebarHeader className="border-b border-border/80 gap-1 pb-2">
+          <div className="flex items-center justify-between px-2 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">
+              TD Support
+            </span>
+            <button
+              type="button"
+              onClick={() => handleOpenChange(!sidebarOpen)}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer flex items-center justify-center shrink-0"
+              title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+              aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            >
+              <PanelLeft className="h-4 w-4" />
+            </button>
+          </div>
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
                 tooltip="New Inquiry"
                 onClick={() => setIsNewTicketOpen(true)}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center! group-data-[collapsible=icon]:mx-auto"
               >
-                <Plus className="h-4 w-4" />
-                <span>New Inquiry</span>
+                <Plus className="h-4 w-4 shrink-0" />
+                <span className="group-data-[collapsible=icon]:hidden">New Inquiry</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -290,10 +298,11 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
               <SidebarMenuButton
                 isActive={pathname === '/'}
                 tooltip="Home & Demos"
+                className="group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center! group-data-[collapsible=icon]:mx-auto"
                 render={
-                  <NextLink href="/">
-                    <Home className="h-4 w-4" />
-                    <span>Home & Demos</span>
+                  <NextLink href="/" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center w-full">
+                    <Home className="h-4 w-4 shrink-0" />
+                    <span className="group-data-[collapsible=icon]:hidden">Home & Demos</span>
                   </NextLink>
                 }
               />
@@ -302,10 +311,11 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
               <SidebarMenuButton
                 isActive={pathname === '/inbox'}
                 tooltip="All Conversations"
+                className="group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center! group-data-[collapsible=icon]:mx-auto"
                 render={
-                  <NextLink href="/inbox">
-                    <MessageSquare className="h-4 w-4" />
-                    <span>All Conversations</span>
+                  <NextLink href="/inbox" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center w-full">
+                    <MessageSquare className="h-4 w-4 shrink-0" />
+                    <span className="group-data-[collapsible=icon]:hidden">All Conversations</span>
                   </NextLink>
                 }
               />
@@ -336,11 +346,12 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
                   defaultOpen={true}
                   className="group/collapsible"
                 >
-                  <SidebarGroup className="p-1">
+                  <SidebarGroup className="p-1 group-data-[collapsible=icon]:p-0">
                     <SidebarGroupLabel
+                      className="group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:mx-auto"
                       render={
-                        <CollapsibleTrigger className="flex w-full items-center justify-between text-xs font-semibold text-muted-foreground hover:text-foreground py-1 px-2 rounded-md hover:bg-sidebar-accent/50 transition-colors">
-                          <span className="flex items-center gap-2 truncate">
+                        <CollapsibleTrigger className="flex w-full items-center justify-between text-xs font-semibold text-muted-foreground hover:text-foreground py-1 px-2 rounded-md hover:bg-sidebar-accent/50 transition-colors group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8">
+                          <span className="flex items-center gap-2 truncate group-data-[collapsible=icon]:justify-center">
                             <MerchantIcon className="h-3.5 w-3.5 shrink-0 text-primary" />
                             <span className="truncate group-data-[collapsible=icon]:hidden">
                               {group.merchant.name}
@@ -373,14 +384,14 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
                                   <SidebarMenuButton
                                     isActive={isActive}
                                     tooltip={conv.subject}
-                                    className="h-8 text-xs font-normal"
+                                    className="h-8 text-xs font-normal group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center! group-data-[collapsible=icon]:mx-auto"
                                     render={
                                       <NextLink
                                         href={`/chat/${conv.id}`}
-                                        className="flex items-center gap-2 w-full min-w-0"
+                                        className="flex items-center gap-2 w-full min-w-0 group-data-[collapsible=icon]:justify-center"
                                       >
                                         <ItemIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-data-active/menu-button:text-primary" />
-                                        <span className="truncate text-xs">{conv.subject}</span>
+                                        <span className="truncate text-xs group-data-[collapsible=icon]:hidden">{conv.subject}</span>
                                       </NextLink>
                                     }
                                   />
@@ -399,14 +410,14 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
         </SidebarContent>
 
         {/* Sidebar Footer: Active Shopper Persona */}
-        <SidebarFooter className="p-2 border-t border-border/80">
+        <SidebarFooter className="p-2 border-t border-border/80 group-data-[collapsible=icon]:p-1">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
                 size="lg"
                 tooltip={customer ? `${customer.name} (${customer.email})` : 'Shopper Persona'}
                 onClick={() => setIsPersonaDialogOpen(true)}
-                className="w-full h-11 p-1.5 rounded-lg hover:bg-sidebar-accent transition-colors"
+                className="w-full h-11 p-1.5 rounded-lg hover:bg-sidebar-accent transition-colors group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center! group-data-[collapsible=icon]:mx-auto"
               >
                 <Avatar className="h-7 w-7 border border-border shrink-0">
                   <AvatarImage src={customer?.avatarUrl} />
@@ -437,10 +448,23 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
 
       {/* Main App Content View Area */}
       <SidebarInset className="flex-1 flex flex-col h-full overflow-hidden bg-background">
-        {/* Compact sticky top-bar with sidebar toggle (only visible when sidebar is collapsed) */}
-        <div className="flex items-center h-10 px-3 border-b border-border/60 shrink-0 md:hidden peer-data-[state=expanded]:hidden" data-sidebar-inset-header>
-          <SidebarTrigger className="h-7 w-7 text-muted-foreground" />
-        </div>
+        {/* Compact sticky top-bar with sidebar toggle (visible when sidebar is collapsed on desktop or mobile) */}
+        {!sidebarOpen && (
+          <div className="flex items-center h-10 px-3 border-b border-border/60 shrink-0 bg-card/40 gap-2" data-sidebar-inset-header>
+            <button
+              type="button"
+              onClick={() => handleOpenChange(true)}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer flex items-center justify-center shrink-0"
+              title="Expand sidebar"
+              aria-label="Expand sidebar"
+            >
+              <PanelLeft className="h-4 w-4" />
+            </button>
+            <span className="text-xs font-medium text-muted-foreground truncate">
+              TD Retail Support Platform
+            </span>
+          </div>
+        )}
         {children}
       </SidebarInset>
 

@@ -1,13 +1,25 @@
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { getAuth, Auth } from 'firebase-admin/auth';
 
 let firestoreInstance: Firestore | null = null;
+let authInstance: Auth | null = null;
 let firebaseAppInstance: App | null = null;
 let isConfigured = false;
 
-export function initFirebaseAdmin(): { app: App | null; firestore: Firestore | null; isConfigured: boolean } {
-  if (firestoreInstance && firebaseAppInstance) {
-    return { app: firebaseAppInstance, firestore: firestoreInstance, isConfigured: true };
+export function initFirebaseAdmin(): {
+  app: App | null;
+  firestore: Firestore | null;
+  auth: Auth | null;
+  isConfigured: boolean;
+} {
+  if (firestoreInstance && firebaseAppInstance && authInstance) {
+    return {
+      app: firebaseAppInstance,
+      firestore: firestoreInstance,
+      auth: authInstance,
+      isConfigured: true,
+    };
   }
 
   // Check if credentials exist in environment
@@ -24,21 +36,33 @@ export function initFirebaseAdmin(): { app: App | null; firestore: Firestore | n
         })
         : getApps()[0];
       firestoreInstance = getFirestore(firebaseAppInstance);
+      authInstance = getAuth(firebaseAppInstance);
       isConfigured = true;
-      return { app: firebaseAppInstance, firestore: firestoreInstance, isConfigured: true };
+      return {
+        app: firebaseAppInstance,
+        firestore: firestoreInstance,
+        auth: authInstance,
+        isConfigured: true,
+      };
     } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS && projectId) {
       firebaseAppInstance = getApps().length === 0
         ? initializeApp({ projectId })
         : getApps()[0];
       firestoreInstance = getFirestore(firebaseAppInstance);
+      authInstance = getAuth(firebaseAppInstance);
       isConfigured = true;
-      return { app: firebaseAppInstance, firestore: firestoreInstance, isConfigured: true };
+      return {
+        app: firebaseAppInstance,
+        firestore: firestoreInstance,
+        auth: authInstance,
+        isConfigured: true,
+      };
     }
   } catch (error) {
     console.warn('[FirebaseAdmin] Could not initialize Firebase Admin SDK with provided credentials, falling back to local persistent store:', error);
   }
 
-  return { app: null, firestore: null, isConfigured: false };
+  return { app: null, firestore: null, auth: null, isConfigured: false };
 }
 
 export function isFirebaseConfigured(): boolean {

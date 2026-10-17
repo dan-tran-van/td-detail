@@ -95,7 +95,8 @@ CRITICAL RULES:
 2. TOOL USAGE: If the customer mentions or asks about an order (e.g., status, tracking, download link, arrival time), you MUST call the "lookupOrderStatus" tool.
 3. AUTHORIZATION: You are strictly scoped to "${merchant.name}". The server will reject orders belonging to other merchants.
 4. HUMAN ESCALATION: If the customer asks to speak with a human, or if their issue exceeds the automated refund policy, you MUST call "requestHumanEscalation".
-5. Be warm, professional, concise, and helpful.`;
+5. MARKDOWN FORMATTING: Always format your responses using clean Markdown. When presenting lists, items, or summaries, ALWAYS use standard Markdown bullet points ('*' or '-') with each item on its own new line. Never use raw unicode bullet symbols like '•'. Use double newlines between paragraphs and headers for clear spacing.
+6. Be warm, professional, concise, and helpful.`;
 
     const toolDeclarations = [
       {
@@ -128,10 +129,14 @@ CRITICAL RULES:
       },
     ];
 
-    // Format chat contents
+    // Format chat contents - exclude the current incoming message if already saved to history
     const contents: any[] = [];
-    // Include last 6 messages
-    for (const msg of history.slice(-6)) {
+    const prevHistory = history.filter(
+      (m, idx) => !(idx === history.length - 1 && m.sender === 'customer' && m.content === customerMessage)
+    );
+
+    // Include last 6 previous turns
+    for (const msg of prevHistory.slice(-6)) {
       contents.push({
         role: msg.sender === 'customer' ? 'user' : 'model',
         parts: [{ text: msg.content }],
@@ -147,9 +152,12 @@ CRITICAL RULES:
     let groundedOrderStatus: string | undefined;
     let escalationTriggered = false;
 
+    // Use gemini-3.5-flash-lite which has generous quota and full function calling support
+    const MODEL_NAME = 'gemini-3.5-flash-lite';
+
     // First call to Gemini
     const response = await client.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: MODEL_NAME,
       contents,
       config: {
         systemInstruction: systemPrompt,
@@ -193,6 +201,7 @@ CRITICAL RULES:
             functionResponse: {
               name: 'lookupOrderStatus',
               response: result,
+              id: fc.id,
             },
           });
         } else if (fc.name === 'requestHumanEscalation') {
@@ -214,6 +223,7 @@ CRITICAL RULES:
             functionResponse: {
               name: 'requestHumanEscalation',
               response: { status: 'success', message: 'Escalation recorded in system.' },
+              id: fc.id,
             },
           });
         }
@@ -230,27 +240,41 @@ CRITICAL RULES:
       ];
 
       const followupResponse = await client.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: MODEL_NAME,
         contents: followupContents,
         config: {
           systemInstruction: systemPrompt,
         },
       });
 
-      finalContent = followupResponse.text || 'I have looked up your details with our system.';
+      const followupCandidate = followupResponse.candidates?.[0];
+      const textParts = followupCandidate?.content?.parts?.filter((p: any) => p.text)?.map((p: any) => p.text).join('\n') || '';
+      finalContent = followupResponse.text || textParts;
+
+      if (!finalContent) {
+        // Fallback to grounded summary based on tool results if model text was empty
+        if (groundedOrderId && merchant.category === 'digital_music') {
+          finalContent = `I have verified your order details for **${groundedOrderId}**. Your order is currently **${groundedOrderStatus || 'processed'}**. Let me know how else I can assist!`;
+        } else if (escalationTriggered) {
+          finalContent = `I have escalated this issue to a senior support representative for **${merchant.name}**. They will review your conversation and follow up shortly!`;
+        } else {
+          finalContent = 'I checked your details with our system. How can I assist you with this request?';
+        }
+      }
     } else {
-      finalContent = response.text || "Thank you for reaching out. How can I assist you with your order today?";
+      const firstTextParts = firstCandidate?.content?.parts?.filter((p: any) => p.text)?.map((p: any) => p.text).join('\n') || '';
+      finalContent = response.text || firstTextParts || "Thank you for reaching out. How can I assist you today?";
     }
 
     const aiMessage: Message = {
-      id: `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: `msg_ai_${crypto.randomUUID()}`,
       conversationId: conversation.id,
       sender: 'ai',
       senderName: `${merchant.name} Gemini AI`,
       content: finalContent,
       metadata: {
         isAiGrounded: toolCallsRecord.length > 0,
-        modelName: 'gemini-2.5-flash',
+        modelName: MODEL_NAME,
         toolCalls: toolCallsRecord,
         groundedOrderId,
         groundedOrderStatus,
@@ -301,14 +325,14 @@ CRITICAL RULES:
       };
 
       const aiMsg: Message = {
-        id: `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        id: `msg_ai_${crypto.randomUUID()}`,
         conversationId: conversation.id,
         sender: 'ai',
         senderName: `${merchant.name} Gemini Assistant`,
         content: `I have transferred this conversation to a senior **${merchant.name} Support Specialist**. A team member has been notified and will review your thread shortly. You will also receive their reply directly via your registered email (${customer.email}).`,
         metadata: {
           isAiGrounded: true,
-          modelName: 'gemini-2.5-flash (server-grounded fallback)',
+          modelName: 'grounded-fallback-engine',
           escalationTriggered: true,
           toolCalls: [escalationToolCall],
         },
@@ -319,9 +343,59 @@ CRITICAL RULES:
       return aiMsg;
     }
 
-    // Extract Order ID if present in message or use conversation.orderId
+    // Check for Refund or Return requests
+    const isRefundQuery =
+      lowerMsg.includes('refund') ||
+      lowerMsg.includes('money back') ||
+      lowerMsg.includes('cancel order') ||
+      lowerMsg.includes('return') ||
+      lowerMsg.includes('chargeback');
+
+    if (isRefundQuery) {
+      let refundPolicyText = '';
+      if (merchant.category === 'digital_music') {
+        refundPolicyText = `Regarding refunds for **${merchant.name}**:\n\n` +
+          `- **Policy:** ${merchant.supportPolicy.refunds}\n` +
+          `- **Returns:** ${merchant.supportPolicy.returns}\n` +
+          `- **Threshold:** ${merchant.supportPolicy.escalationThreshold}\n\n` +
+          `Because digital audio licenses and cryptographic stem keys are provisioned immediately, automated refunds are restricted once downloaded. If you encountered corrupted files or license provisioning issues, I can escalate your request directly to our billing team. Would you like me to request human specialist review?`;
+      } else {
+        refundPolicyText = `Regarding refunds and returns for **${merchant.name}**:\n\n` +
+          `- **Returns Policy:** ${merchant.supportPolicy.returns}\n` +
+          `- **Refund Policy:** ${merchant.supportPolicy.refunds}\n\n` +
+          `If your order arrived damaged or missing items, reply with photos or details and we will issue an immediate replacement or full refund.`;
+      }
+
+      const aiMsg: Message = {
+        id: `msg_ai_${crypto.randomUUID()}`,
+        conversationId: conversation.id,
+        sender: 'ai',
+        senderName: `${merchant.name} Gemini Assistant`,
+        content: refundPolicyText,
+        metadata: {
+          isAiGrounded: true,
+          modelName: 'grounded-fallback-engine',
+        },
+        timestamp: new Date().toISOString(),
+      };
+
+      await TDStore.addMessage(aiMsg);
+      return aiMsg;
+    }
+
+    // Extract Order ID if present in message or if the query specifically asks about order status
     const orderMatch = customerMessage.match(/ORD-[A-Z]+-\d+/i);
-    const orderIdToLookup = orderMatch ? orderMatch[0].toUpperCase() : conversation.orderId;
+    const isOrderQuery =
+      orderMatch !== null ||
+      lowerMsg.includes('order') ||
+      lowerMsg.includes('status') ||
+      lowerMsg.includes('track') ||
+      lowerMsg.includes('delivery') ||
+      lowerMsg.includes('download') ||
+      lowerMsg.includes('license') ||
+      lowerMsg.includes('where is');
+
+    const orderIdToLookup = orderMatch ? orderMatch[0].toUpperCase() : (isOrderQuery ? conversation.orderId : undefined);
 
     if (orderIdToLookup) {
       // Execute server-side tool with strict multi-merchant boundary verification
@@ -343,7 +417,7 @@ CRITICAL RULES:
         // Safe rejection response
         const errorContent = `I checked our order database for **${orderIdToLookup}**: ${lookupResult.error}`;
         const aiMsg: Message = {
-          id: `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          id: `msg_ai_${crypto.randomUUID()}`,
           conversationId: conversation.id,
           sender: 'ai',
           senderName: `${merchant.name} Gemini Assistant`,
@@ -365,27 +439,27 @@ CRITICAL RULES:
 
       if (merchant.category === 'digital_music') {
         replyContent = `Hello ${customer.name}, I pulled up your verified order details for **${o.orderId}**:\n\n` +
-          `• **Status:** ${o.orderStatusDisplay}\n` +
-          `• **Items:** ${o.items.map((i) => `${i.title} (${i.quantity}x)`).join(', ')}\n` +
-          (o.items[0]?.licenseKey ? `• **License Key:** \`${o.items[0].licenseKey}\`\n` : '') +
-          (o.items[0]?.downloadUrl ? `• **Vault Download Link:** [Direct Download](${o.items[0].downloadUrl})\n` : '') +
-          `• **Fulfillment Details:** ${o.courierNotes || 'Bit-perfect lossless files ready in your vault.'}\n\n` +
+          `- **Status:** ${o.orderStatusDisplay}\n` +
+          `- **Items:** ${o.items.map((i) => `${i.title} (${i.quantity}x)`).join(', ')}\n` +
+          (o.items[0]?.licenseKey ? `- **License Key:** \`${o.items[0].licenseKey}\`\n` : '') +
+          (o.items[0]?.downloadUrl ? `- **Vault Download Link:** [Direct Download](${o.items[0].downloadUrl})\n` : '') +
+          `- **Fulfillment Details:** ${o.courierNotes || 'Bit-perfect lossless files ready in your vault.'}\n\n` +
           `According to SoundWave policy, your license and master audio stems can be re-downloaded at any time from your account. Let me know if you need assistance configuring high-res audio playback!`;
       } else if (merchant.category === 'groceries') {
         replyContent = `Hello ${customer.name}, here is the live fulfillment status for **${o.orderId}**:\n\n` +
-          `• **Status:** ${o.orderStatusDisplay}\n` +
-          `• **Items:** ${o.items.map((i) => `${i.title} (${i.quantity}x)`).join(', ')}\n` +
-          `• **Delivery Courier:** ${o.carrierOrCourier || 'FreshCart Express Team'}\n` +
-          `• **Estimated Arrival:** ${o.estimatedDelivery || 'Within current delivery window'}\n` +
-          `• **Destination:** ${o.deliveryAddress || customer.defaultAddress || 'On file'}\n` +
-          `• **Dispatch Notes:** ${o.courierNotes || 'Thermal insulated packing with ice packs active.'}\n\n` +
+          `- **Status:** ${o.orderStatusDisplay}\n` +
+          `- **Items:** ${o.items.map((i) => `${i.title} (${i.quantity}x)`).join(', ')}\n` +
+          `- **Delivery Courier:** ${o.carrierOrCourier || 'FreshCart Express Team'}\n` +
+          `- **Estimated Arrival:** ${o.estimatedDelivery || 'Within current delivery window'}\n` +
+          `- **Destination:** ${o.deliveryAddress || customer.defaultAddress || 'On file'}\n` +
+          `- **Dispatch Notes:** ${o.courierNotes || 'Thermal insulated packing with ice packs active.'}\n\n` +
           `All perishable items are protected by our 100% Farm-Fresh Guarantee. If you need special gate instructions given to the driver, just reply here!`;
       } else {
         replyContent = `Order **${o.orderId}** is currently **${o.orderStatusDisplay}**. Total: $${o.totalAmount.toFixed(2)} ${o.currency}.`;
       }
 
       const aiMsg: Message = {
-        id: `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        id: `msg_ai_${crypto.randomUUID()}`,
         conversationId: conversation.id,
         sender: 'ai',
         senderName: `${merchant.name} Gemini Assistant`,
@@ -407,13 +481,13 @@ CRITICAL RULES:
     // General merchant assistance (policy, greetings, inquiries)
     let generalReply = `Hello ${customer.name}! I am your AI assistant for **${merchant.name}**.\n\n` +
       `I can check real-time order tracking, retrieve download license keys, or help you with returns and replacements.\n\n` +
-      `**Merchant Policy Quick Reference:**\n` +
-      `• Returns & Freshness: ${merchant.supportPolicy.returns}\n` +
-      `• Refunds: ${merchant.supportPolicy.refunds}\n\n` +
+      `**Merchant Policy Quick Reference:**\n\n` +
+      `- **Returns & Freshness:** ${merchant.supportPolicy.returns}\n` +
+      `- **Refunds:** ${merchant.supportPolicy.refunds}\n\n` +
       `To check an order, please provide your Order ID (such as \`#ORD-MUS-8821\` or \`#ORD-GROC-5512\`), or click "Request Human Assistance" if you need immediate human review.`;
 
     const aiMsg: Message = {
-      id: `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: `msg_ai_${crypto.randomUUID()}`,
       conversationId: conversation.id,
       sender: 'ai',
       senderName: `${merchant.name} Gemini Assistant`,

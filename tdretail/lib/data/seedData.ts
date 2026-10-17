@@ -127,9 +127,9 @@ export const SEED_ORDERS: Order[] = [
     id: 'order_mus_9042',
     orderId: 'ORD-MUS-9042',
     merchantId: 'merchant_music',
-    customerId: 'cust_sarah_connor',
-    customerEmail: 'sarah.connor@example.com',
-    customerName: 'Sarah Connor',
+    customerId: 'cust_alex_chen',
+    customerEmail: 'alex.chen@example.com',
+    customerName: 'Alex Chen',
     items: [
       {
         id: 'item_mus_3',
@@ -150,7 +150,7 @@ export const SEED_ORDERS: Order[] = [
     trackingNumber: 'KEYGEN-QUEUE-9042',
     carrierOrCourier: 'Automated License Vault',
     estimatedDelivery: 'Estimated ready in 10-15 minutes',
-    deliveryAddress: 'Digital Vault (sarah.connor@example.com)',
+    deliveryAddress: 'Digital Vault (alex.chen@example.com)',
     courierNotes: 'Audio files rendering studio watermarks. Server queue position #2.',
     createdAt: '2026-10-14T12:00:00Z',
     updatedAt: '2026-10-14T12:05:00Z',
@@ -159,9 +159,9 @@ export const SEED_ORDERS: Order[] = [
     id: 'order_mus_7710',
     orderId: 'ORD-MUS-7710',
     merchantId: 'merchant_music',
-    customerId: 'cust_sarah_connor',
-    customerEmail: 'sarah.connor@example.com',
-    customerName: 'Sarah Connor',
+    customerId: 'cust_alex_chen',
+    customerEmail: 'alex.chen@example.com',
+    customerName: 'Alex Chen',
     items: [
       {
         id: 'item_mus_4',

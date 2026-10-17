@@ -663,14 +663,23 @@ export default function LandingPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <TabsList className="bg-zinc-800/90 text-zinc-400 p-0.5 rounded-xl border border-zinc-700/50">
-                          <TabsTrigger value="orders" className="text-xs font-mono py-1 px-3 data-active:bg-zinc-700 data-active:text-sky-300">
+                        <TabsList className="bg-zinc-950/80 p-1 rounded-xl border border-zinc-800 text-zinc-400">
+                          <TabsTrigger
+                            value="orders"
+                            className="text-xs font-mono py-1 px-3 rounded-lg text-zinc-400 hover:text-zinc-200 data-active:bg-zinc-800 data-active:text-white data-active:shadow-xs transition-colors"
+                          >
                             POST /orders
                           </TabsTrigger>
-                          <TabsTrigger value="webhooks" className="text-xs font-mono py-1 px-3 data-active:bg-zinc-700 data-active:text-sky-300">
+                          <TabsTrigger
+                            value="webhooks"
+                            className="text-xs font-mono py-1 px-3 rounded-lg text-zinc-400 hover:text-zinc-200 data-active:bg-zinc-800 data-active:text-white data-active:shadow-xs transition-colors"
+                          >
                             Inbound Webhook
                           </TabsTrigger>
-                          <TabsTrigger value="conversations" className="text-xs font-mono py-1 px-3 data-active:bg-zinc-700 data-active:text-sky-300">
+                          <TabsTrigger
+                            value="conversations"
+                            className="text-xs font-mono py-1 px-3 rounded-lg text-zinc-400 hover:text-zinc-200 data-active:bg-zinc-800 data-active:text-white data-active:shadow-xs transition-colors"
+                          >
                             AI Resolution
                           </TabsTrigger>
                         </TabsList>

@@ -28,6 +28,7 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useCart } from '@/context/CartContext';
 import { useOrders } from '@/context/OrderContext';
+import { useVisitor } from '@/context/VisitorContext';
 import { getProductById, formatINR } from '@/lib/products';
 import { Product } from '@/lib/types';
 
@@ -38,6 +39,7 @@ function CheckoutContent() {
 
   const { items: cartItems, clearCart, totalAmount: cartTotal } = useCart();
   const { saveOrder } = useOrders();
+  const { visitor, updateVisitor, isLoaded: isVisitorLoaded } = useVisitor();
 
   // Single product direct Buy Now item or cart items
   const [directProduct, setDirectProduct] = useState<Product | null>(null);
@@ -59,12 +61,19 @@ function CheckoutContent() {
     ? directProduct.price
     : cartTotal;
 
-  // Customer form state prefilled with demo persona Sarah Connor
-  const [name, setName] = useState('Sarah Connor');
-  const [email, setEmail] = useState('sarah.connor@example.com');
+  // Customer form state initialized with dynamic visitor profile
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('+1 (555) 234-5678');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isVisitorLoaded && visitor) {
+      setName(visitor.name);
+      setEmail(visitor.email);
+    }
+  }, [isVisitorLoaded, visitor]);
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,6 +89,9 @@ function CheckoutContent() {
 
     setIsSubmitting(true);
     setErrorMessage(null);
+
+    // Update visitor profile with entered checkout credentials
+    updateVisitor({ name: name.trim(), email: email.trim() });
 
     try {
       const res = await fetch('/api/checkout', {

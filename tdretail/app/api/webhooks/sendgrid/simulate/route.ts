@@ -5,11 +5,25 @@ import { TDStore } from '@/lib/firebase/store';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { conversationId, replyText, customerEmail, customSubject } = body;
+    let { conversationId, replyText, customerEmail, customSubject } = body;
+
+    // Support alternate payload format { fromEmail, toEmail, subject, bodyText }
+    if (!replyText && body.bodyText) {
+      replyText = body.bodyText;
+    }
+    if (!customerEmail && body.fromEmail) {
+      customerEmail = body.fromEmail;
+    }
+    if (!customSubject && body.subject) {
+      customSubject = body.subject;
+    }
+    if (!conversationId && body.toEmail) {
+      conversationId = EmailService.extractConversationId(body.toEmail, body.subject || '');
+    }
 
     if (!conversationId || !replyText?.trim()) {
       return NextResponse.json(
-        { error: 'conversationId and replyText are required.' },
+        { error: 'conversationId (or valid toEmail/subject) and replyText are required.' },
         { status: 400 }
       );
     }

@@ -6,6 +6,19 @@ import { GeminiAgentService } from '@/lib/services/geminiService';
 import { EmailService } from '@/lib/services/emailService';
 import { Conversation, Message } from '@/lib/types';
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: CORS_HEADERS,
+  });
+}
+
 export async function GET(req: NextRequest) {
   try {
     const customer = await getCurrentCustomer();
@@ -13,28 +26,43 @@ export async function GET(req: NextRequest) {
     const merchantId = searchParams.get('merchantId') || undefined;
 
     const conversations = await TDStore.getConversations(customer.id, merchantId);
-    return NextResponse.json({ conversations });
+    return NextResponse.json({ conversations }, { headers: CORS_HEADERS });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500, headers: CORS_HEADERS });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const customer = await getCurrentCustomer();
     const body = await req.json();
-    const { merchantId, orderId, subject, initialMessage } = body;
+    const { merchantId, orderId, subject, initialMessage, customerEmail: bodyEmail, customerName: bodyName, customerId: bodyId } = body;
+
+    let customer = await getCurrentCustomer();
+    // If request originates from music-merchant with visitor identity, use that visitor's identity!
+    if (bodyEmail) {
+      const email = bodyEmail.trim().toLowerCase();
+      let visitorCustomer = await TDStore.getCustomerByEmail(email);
+      if (!visitorCustomer) {
+        visitorCustomer = await TDStore.upsertCustomer({
+          id: bodyId || `cust_${email.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`,
+          name: bodyName?.trim() || email.split('@')[0],
+          email,
+          createdAt: new Date().toISOString(),
+        });
+      }
+      customer = visitorCustomer;
+    }
 
     if (!merchantId || !subject?.trim()) {
       return NextResponse.json(
         { error: 'merchantId and subject are required.' },
-        { status: 400 }
+        { status: 400, headers: CORS_HEADERS }
       );
     }
 
     const merchant = await TDStore.getMerchantById(merchantId);
     if (!merchant) {
-      return NextResponse.json({ error: 'Invalid merchant ID.' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid merchant ID.' }, { status: 400, headers: CORS_HEADERS });
     }
 
     // Strict validation if orderId is provided
@@ -49,12 +77,12 @@ export async function POST(req: NextRequest) {
       if (!orderCheck.success) {
         return NextResponse.json(
           { error: `Cannot associate order: ${orderCheck.error}` },
-          { status: 400 }
+          { status: 400, headers: CORS_HEADERS }
         );
       }
     }
 
-    const convId = `conv_${merchant.category === 'digital_music' ? 'music' : 'grocery'}_${Date.now().toString(36)}`;
+    const convId = `conv_${merchant.category === 'digital_music' ? 'music' : 'grocery'}_${crypto.randomUUID()}`;
     const now = new Date().toISOString();
 
     const newConv: Conversation = {
@@ -81,7 +109,7 @@ export async function POST(req: NextRequest) {
 
     if (initialMessage && initialMessage.trim()) {
       customerMsg = {
-        id: `msg_cust_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        id: `msg_cust_${crypto.randomUUID()}`,
         conversationId: convId,
         sender: 'customer',
         senderName: customer.name,
@@ -114,27 +142,10 @@ export async function POST(req: NextRequest) {
         conversation: newConv,
         messages: [customerMsg, aiMsg].filter(Boolean),
       },
-      {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        },
-      }
+      { headers: CORS_HEADERS }
     );
   } catch (error) {
     console.error('[API] Error creating conversation:', error);
-    return NextResponse.json({ error: 'Failed to create conversation' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create conversation' }, { status: 500, headers: CORS_HEADERS });
   }
-}
-
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
 }

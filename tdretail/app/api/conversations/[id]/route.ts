@@ -3,6 +3,17 @@ import { getCurrentCustomer } from '@/lib/session';
 import { TDStore } from '@/lib/firebase/store';
 import { OrderService } from '@/lib/services/orderService';
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, PATCH, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -13,12 +24,38 @@ export async function GET(
 
     const conversation = await TDStore.getConversationById(id);
     if (!conversation) {
-      return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Conversation not found' },
+        {
+          status: 404,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+          },
+        }
+      );
     }
 
+    const { searchParams } = new URL(_req.url);
+    const queryEmail = searchParams.get('customerEmail')?.trim().toLowerCase();
+    const queryCustomerId = searchParams.get('customerId');
+
     // Security check: Customer can only view their own conversations
-    if (conversation.customerId !== customer.id && conversation.customerEmail !== customer.email) {
-      return NextResponse.json({ error: 'Access denied to this conversation thread' }, { status: 403 });
+    const isOwner =
+      conversation.customerId === customer.id ||
+      conversation.customerEmail?.toLowerCase() === customer.email?.toLowerCase() ||
+      (queryEmail && conversation.customerEmail?.toLowerCase() === queryEmail) ||
+      (queryCustomerId && conversation.customerId === queryCustomerId);
+
+    if (!isOwner) {
+      return NextResponse.json(
+        { error: 'Access denied to this conversation thread' },
+        {
+          status: 403,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+          },
+        }
+      );
     }
 
     const merchant = await TDStore.getMerchantById(conversation.merchantId);
@@ -44,15 +81,32 @@ export async function GET(
       conversation.unreadByCustomer = false;
     }
 
-    return NextResponse.json({
-      conversation,
-      merchant,
-      linkedOrder,
-      messages,
-    });
+    return NextResponse.json(
+      {
+        conversation,
+        merchant,
+        linkedOrder,
+        messages,
+      },
+      {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, PATCH, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      }
+    );
   } catch (error) {
     console.error('[API] Error fetching conversation:', error);
-    return NextResponse.json({ error: 'Failed to fetch conversation' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch conversation' },
+      {
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
+    );
   }
 }
 
@@ -67,11 +121,36 @@ export async function PATCH(
 
     const updated = await TDStore.updateConversation(id, { status });
     if (!updated) {
-      return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Conversation not found' },
+        {
+          status: 404,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+          },
+        }
+      );
     }
 
-    return NextResponse.json({ success: true, conversation: updated });
+    return NextResponse.json(
+      { success: true, conversation: updated },
+      {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, PATCH, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      }
+    );
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update conversation' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to update conversation' },
+      {
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
+    );
   }
 }

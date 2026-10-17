@@ -35,6 +35,7 @@ import {
 import { Conversation, Merchant, Message, Customer } from '@/lib/types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 
 import { Suspense } from 'react';
 
@@ -218,10 +219,13 @@ function ConversationThreadInner() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fromEmail: customer?.email || 'sarah.connor@example.com',
-          toEmail: `support+thread_${conversation.id}@support.tdretail.example.com`,
-          subject: `Re: ${conversation.subject}`,
-          bodyText: simulatedEmailText,
+          conversationId: conversation.id,
+          replyText: simulatedEmailText.trim(),
+          customerEmail: customer?.email || conversation.customerEmail || 'sarah.connor@example.com',
+          fromEmail: customer?.email || conversation.customerEmail || 'sarah.connor@example.com',
+          toEmail: `reply+${conversation.id}@inbound.tdretail.example.com`,
+          subject: `Re: ${conversation.subject} [Ref: ${conversation.id}]`,
+          bodyText: simulatedEmailText.trim(),
         }),
       });
 
@@ -495,7 +499,7 @@ function ConversationThreadInner() {
                         <div className="whitespace-pre-wrap">{msg.content}</div>
                       ) : (
                         <div className="prose prose-sm dark:prose-invert max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_p]:my-1.5 [&_ul]:my-2 [&_ul]:pl-5 [&_ul]:list-disc [&_ol]:my-2 [&_ol]:pl-5 [&_ol]:list-decimal [&_li]:my-0.5 [&_code]:bg-muted [&_code]:text-foreground [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-[11px] [&_code]:font-mono [&_pre]:bg-muted [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-primary [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:my-2 [&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-border [&_th]:p-1.5 [&_th]:bg-muted/50 [&_th]:text-left [&_td]:border [&_td]:border-border [&_td]:p-1.5 [&_strong]:font-semibold [&_strong]:text-foreground [&_h1]:text-base [&_h1]:font-bold [&_h1]:my-2 [&_h2]:text-sm [&_h2]:font-bold [&_h2]:my-2 [&_h3]:text-xs [&_h3]:font-bold [&_h3]:my-1.5 [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 hover:[&_a]:opacity-80">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
                             {msg.content}
                           </ReactMarkdown>
                         </div>
@@ -610,19 +614,19 @@ function ConversationThreadInner() {
                 >
                   <Sparkles className="h-3 w-3 text-primary" />
                   <span>
-                    {showDemoDrawer ? 'Hide Demo Simulator' : 'Simulate Email Webhook & Specialist'}
+                    {showDemoDrawer ? 'Hide Inbound Tools' : 'Inbound Email & Specialist Tools'}
                   </span>
                   {showDemoDrawer ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                 </button>
               </div>
 
-              {/* Simulator Drawer */}
+              {/* Inbound & Specialist Drawer */}
               {showDemoDrawer && (
                 <div className="mt-3 p-3 rounded-xl border border-border bg-card shadow-xs text-xs space-y-3 max-w-3xl mx-auto">
                   <div className="font-semibold text-foreground flex items-center justify-between border-b border-border pb-1.5">
-                    <span>Judge / Demo Tools</span>
+                    <span>Developer & Integration Tools</span>
                     <Badge variant="outline" className="text-[10px]">
-                      SendGrid & Specialist Simulation
+                      SendGrid & Specialist Operations
                     </Badge>
                   </div>
 
@@ -633,10 +637,10 @@ function ConversationThreadInner() {
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* Email Webhook simulation */}
+                    {/* Email Webhook ingestion */}
                     <div className="space-y-1.5 border border-border p-2.5 rounded-lg bg-background">
                       <span className="font-semibold text-foreground block text-[11px]">
-                        1. Simulate Email Reply Ingestion
+                        1. Inbound Email Reply (SendGrid Ingestion)
                       </span>
                       <textarea
                         rows={2}
@@ -652,14 +656,14 @@ function ConversationThreadInner() {
                         className="w-full text-xs h-7 gap-1"
                       >
                         <Mail className="h-3 w-3" />
-                        <span>Trigger Inbound Email Webhook</span>
+                        <span>Send Inbound Email</span>
                       </Button>
                     </div>
 
-                    {/* Human Specialist simulation */}
+                    {/* Human Specialist */}
                     <div className="space-y-1.5 border border-border p-2.5 rounded-lg bg-background">
                       <span className="font-semibold text-foreground block text-[11px]">
-                        2. Simulate Human Specialist Takeover
+                        2. Human Specialist Response
                       </span>
                       <textarea
                         rows={2}

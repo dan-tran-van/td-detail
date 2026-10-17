@@ -15,7 +15,7 @@ export interface SendSupportEmailParams {
 export class EmailService {
   private static isSendGridConfigured(): boolean {
     const key = process.env.SENDGRID_API_KEY;
-    return Boolean(key && key.startsWith('SG.'));
+    return Boolean(key && key.startsWith('SG.') && !key.includes('your_sendgrid_api_key'));
   }
 
   /**
@@ -54,7 +54,7 @@ export class EmailService {
     `;
 
     const emailRecord: OutboxEmail = {
-      id: `email_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: `email_${crypto.randomUUID()}`,
       conversationId,
       merchantId,
       merchantName,
@@ -174,7 +174,7 @@ export class EmailService {
 
     // Ingest the customer reply
     const customerMsg: Message = {
-      id: `msg_inbound_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: `msg_inbound_${crypto.randomUUID()}`,
       conversationId,
       sender: 'customer',
       senderName: conversation.customerName,
