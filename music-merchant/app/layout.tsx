@@ -22,29 +22,22 @@ export const metadata: Metadata = {
     'Independent digital music storefront powered by TD Retail multi-merchant customer resolution platform. Bit-perfect 24-bit FLAC audio, master stems, and instant digital licenses.',
 };
 
+import { resolveTDRetailUrl, resolveMerchantId } from '@/lib/config';
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const runtimeApiUrl =
-    process.env.NEXT_PUBLIC_TD_RETAIL_API_URL ||
-    process.env.TD_RETAIL_API_URL ||
-    (typeof process.env.K_SERVICE !== 'undefined'
-      ? 'https://tdretail-215785827581.asia-southeast1.run.app'
-      : 'http://localhost:3000');
-
-  const runtimeMerchantId =
-    process.env.NEXT_PUBLIC_MERCHANT_ID ||
-    process.env.MERCHANT_ID ||
-    'merchant_music';
+  const runtimeApiUrl = resolveTDRetailUrl();
+  const runtimeMerchantId = resolveMerchantId();
 
   return (
     <html lang="en" className={cn("dark", "font-sans", inter.variable)}>
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `window.__TD_CONFIG = { tdRetailApiUrl: ${JSON.stringify(runtimeApiUrl.replace(/\/+$/, ''))}, merchantId: ${JSON.stringify(runtimeMerchantId)} };`,
+            __html: `window.__TD_CONFIG = { tdRetailApiUrl: ${JSON.stringify(runtimeApiUrl)}, merchantId: ${JSON.stringify(runtimeMerchantId)} };`,
           }}
         />
       </head>
