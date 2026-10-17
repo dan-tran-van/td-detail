@@ -95,7 +95,8 @@ CRITICAL RULES:
 2. TOOL USAGE: If the customer mentions or asks about an order (e.g., status, tracking, download link, arrival time), you MUST call the "lookupOrderStatus" tool.
 3. AUTHORIZATION: You are strictly scoped to "${merchant.name}". The server will reject orders belonging to other merchants.
 4. HUMAN ESCALATION: If the customer asks to speak with a human, or if their issue exceeds the automated refund policy, you MUST call "requestHumanEscalation".
-5. Be warm, professional, concise, and helpful.`;
+5. MARKDOWN FORMATTING: Always format your responses using clean Markdown. When presenting lists, items, or summaries, ALWAYS use standard Markdown bullet points ('*' or '-') with each item on its own new line. Never use raw unicode bullet symbols like '•'. Use double newlines between paragraphs and headers for clear spacing.
+6. Be warm, professional, concise, and helpful.`;
 
     const toolDeclarations = [
       {
@@ -365,20 +366,20 @@ CRITICAL RULES:
 
       if (merchant.category === 'digital_music') {
         replyContent = `Hello ${customer.name}, I pulled up your verified order details for **${o.orderId}**:\n\n` +
-          `• **Status:** ${o.orderStatusDisplay}\n` +
-          `• **Items:** ${o.items.map((i) => `${i.title} (${i.quantity}x)`).join(', ')}\n` +
-          (o.items[0]?.licenseKey ? `• **License Key:** \`${o.items[0].licenseKey}\`\n` : '') +
-          (o.items[0]?.downloadUrl ? `• **Vault Download Link:** [Direct Download](${o.items[0].downloadUrl})\n` : '') +
-          `• **Fulfillment Details:** ${o.courierNotes || 'Bit-perfect lossless files ready in your vault.'}\n\n` +
+          `- **Status:** ${o.orderStatusDisplay}\n` +
+          `- **Items:** ${o.items.map((i) => `${i.title} (${i.quantity}x)`).join(', ')}\n` +
+          (o.items[0]?.licenseKey ? `- **License Key:** \`${o.items[0].licenseKey}\`\n` : '') +
+          (o.items[0]?.downloadUrl ? `- **Vault Download Link:** [Direct Download](${o.items[0].downloadUrl})\n` : '') +
+          `- **Fulfillment Details:** ${o.courierNotes || 'Bit-perfect lossless files ready in your vault.'}\n\n` +
           `According to SoundWave policy, your license and master audio stems can be re-downloaded at any time from your account. Let me know if you need assistance configuring high-res audio playback!`;
       } else if (merchant.category === 'groceries') {
         replyContent = `Hello ${customer.name}, here is the live fulfillment status for **${o.orderId}**:\n\n` +
-          `• **Status:** ${o.orderStatusDisplay}\n` +
-          `• **Items:** ${o.items.map((i) => `${i.title} (${i.quantity}x)`).join(', ')}\n` +
-          `• **Delivery Courier:** ${o.carrierOrCourier || 'FreshCart Express Team'}\n` +
-          `• **Estimated Arrival:** ${o.estimatedDelivery || 'Within current delivery window'}\n` +
-          `• **Destination:** ${o.deliveryAddress || customer.defaultAddress || 'On file'}\n` +
-          `• **Dispatch Notes:** ${o.courierNotes || 'Thermal insulated packing with ice packs active.'}\n\n` +
+          `- **Status:** ${o.orderStatusDisplay}\n` +
+          `- **Items:** ${o.items.map((i) => `${i.title} (${i.quantity}x)`).join(', ')}\n` +
+          `- **Delivery Courier:** ${o.carrierOrCourier || 'FreshCart Express Team'}\n` +
+          `- **Estimated Arrival:** ${o.estimatedDelivery || 'Within current delivery window'}\n` +
+          `- **Destination:** ${o.deliveryAddress || customer.defaultAddress || 'On file'}\n` +
+          `- **Dispatch Notes:** ${o.courierNotes || 'Thermal insulated packing with ice packs active.'}\n\n` +
           `All perishable items are protected by our 100% Farm-Fresh Guarantee. If you need special gate instructions given to the driver, just reply here!`;
       } else {
         replyContent = `Order **${o.orderId}** is currently **${o.orderStatusDisplay}**. Total: $${o.totalAmount.toFixed(2)} ${o.currency}.`;
@@ -407,9 +408,9 @@ CRITICAL RULES:
     // General merchant assistance (policy, greetings, inquiries)
     let generalReply = `Hello ${customer.name}! I am your AI assistant for **${merchant.name}**.\n\n` +
       `I can check real-time order tracking, retrieve download license keys, or help you with returns and replacements.\n\n` +
-      `**Merchant Policy Quick Reference:**\n` +
-      `• Returns & Freshness: ${merchant.supportPolicy.returns}\n` +
-      `• Refunds: ${merchant.supportPolicy.refunds}\n\n` +
+      `**Merchant Policy Quick Reference:**\n\n` +
+      `- **Returns & Freshness:** ${merchant.supportPolicy.returns}\n` +
+      `- **Refunds:** ${merchant.supportPolicy.refunds}\n\n` +
       `To check an order, please provide your Order ID (such as \`#ORD-MUS-8821\` or \`#ORD-GROC-5512\`), or click "Request Human Assistance" if you need immediate human review.`;
 
     const aiMsg: Message = {
