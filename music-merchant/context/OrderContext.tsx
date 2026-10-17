@@ -82,6 +82,7 @@ const INITIAL_DEMO_ORDERS: Order[] = [
 ];
 
 import { useVisitor } from '@/context/VisitorContext';
+import { syncOrderToTDRetail } from '@/lib/api-sync';
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
   const { visitor, isLoaded: isVisitorLoaded } = useVisitor();
@@ -95,15 +96,23 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     if (!isVisitorLoaded) return;
     try {
       const stored = localStorage.getItem(visitorStorageKey);
-      // Map seed orders to active visitor
-      const personalizedSeedOrders: Order[] = INITIAL_DEMO_ORDERS.map((demo) => ({
-        ...demo,
-        customerId: visitor.id,
-        customerEmail: visitor.email,
-        customerName: visitor.name,
-        deliveryAddress: `Digital Vault (${visitor.email})`,
-      }));
+      const visitorCode = visitor.id.replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase() || 'GST1';
 
+      // Map seed orders to active visitor with unique order IDs
+      const personalizedSeedOrders: Order[] = INITIAL_DEMO_ORDERS.map((demo, idx) => {
+        const uniqueOrderId = `ORD-MUS-${visitorCode}-${idx === 0 ? '8821' : '9042'}`;
+        return {
+          ...demo,
+          id: `order_${visitor.id}_${idx + 1}`,
+          orderId: uniqueOrderId,
+          customerId: visitor.id,
+          customerEmail: visitor.email,
+          customerName: visitor.name,
+          deliveryAddress: `Digital Vault (${visitor.email})`,
+        };
+      });
+
+      let loadedOrders: Order[] = [];
       if (stored) {
         const parsed: Order[] = JSON.parse(stored);
         const merged = [...parsed];
@@ -112,10 +121,19 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             merged.push(demoOrder);
           }
         }
-        setOrders(merged);
+        loadedOrders = merged;
       } else {
-        setOrders(personalizedSeedOrders);
+        loadedOrders = personalizedSeedOrders;
       }
+
+      setOrders(loadedOrders);
+
+      // Auto-sync visitor demo orders to TD Retail platform in background
+      personalizedSeedOrders.forEach((order) => {
+        syncOrderToTDRetail(order).catch((err) => {
+          console.debug('[OrderContext] Demo order sync background notice:', err);
+        });
+      });
     } catch (e) {
       console.warn('Could not read orders from localStorage', e);
       setOrders([]);
