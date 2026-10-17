@@ -5,6 +5,17 @@ import { GeminiAgentService } from '@/lib/services/geminiService';
 import { EmailService } from '@/lib/services/emailService';
 import { Message } from '@/lib/types';
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -12,9 +23,26 @@ export async function GET(
   try {
     const { id } = await params;
     const messages = await TDStore.getMessages(id);
-    return NextResponse.json({ messages });
+    return NextResponse.json(
+      { messages },
+      {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      }
+    );
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch messages' },
+      {
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
+    );
   }
 }
 
@@ -29,17 +57,41 @@ export async function POST(
     const { content } = body;
 
     if (!content || !content.trim()) {
-      return NextResponse.json({ error: 'Message content cannot be empty' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Message content cannot be empty' },
+        {
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+          },
+        }
+      );
     }
 
     const conversation = await TDStore.getConversationById(id);
     if (!conversation) {
-      return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Conversation not found' },
+        {
+          status: 404,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+          },
+        }
+      );
     }
 
     // Verify ownership
     if (conversation.customerId !== customer.id && conversation.customerEmail !== customer.email) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Access denied' },
+        {
+          status: 403,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+          },
+        }
+      );
     }
 
     const now = new Date().toISOString();
@@ -75,14 +127,31 @@ export async function POST(
     // Refresh conversation metadata
     const updatedConv = await TDStore.getConversationById(id);
 
-    return NextResponse.json({
-      success: true,
-      customerMessage: customerMsg,
-      aiMessage: aiMsg,
-      conversation: updatedConv,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        customerMessage: customerMsg,
+        aiMessage: aiMsg,
+        conversation: updatedConv,
+      },
+      {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      }
+    );
   } catch (error) {
     console.error('[API] Error posting message:', error);
-    return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to send message' },
+      {
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
+    );
   }
 }
