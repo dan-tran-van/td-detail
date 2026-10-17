@@ -9,26 +9,10 @@ declare global {
   }
 }
 
-export function getTDRetailPortalUrl(): string {
-  if (typeof window !== 'undefined') {
-    if (window.__TD_CONFIG?.tdRetailApiUrl) {
-      return window.__TD_CONFIG.tdRetailApiUrl;
-    }
-    // If the browser is running on Cloud Run (*.run.app), default to the sibling tdretail Cloud Run domain!
-    if (window.location.hostname.includes('.run.app')) {
-      const liveUrl = process.env.NEXT_PUBLIC_TD_RETAIL_API_URL;
-      if (liveUrl && !liveUrl.includes('localhost')) {
-        return liveUrl.replace(/\/+$/, '');
-      }
-      return 'https://tdretail-215785827581.asia-southeast1.run.app';
-    }
-  }
+import { resolveTDRetailUrl, resolveMerchantId } from './config';
 
-  const url =
-    process.env.NEXT_PUBLIC_TD_RETAIL_API_URL ||
-    process.env.TD_RETAIL_API_URL ||
-    'http://localhost:3000';
-  return url.replace(/\/+$/, '');
+export function getTDRetailPortalUrl(): string {
+  return resolveTDRetailUrl();
 }
 
 function getTDRetailApiBase(): string {
@@ -36,14 +20,7 @@ function getTDRetailApiBase(): string {
 }
 
 function getMerchantId(): string {
-  if (typeof window !== 'undefined' && window.__TD_CONFIG?.merchantId) {
-    return window.__TD_CONFIG.merchantId;
-  }
-  return (
-    process.env.NEXT_PUBLIC_MERCHANT_ID ||
-    process.env.MERCHANT_ID ||
-    'merchant_music'
-  );
+  return resolveMerchantId();
 }
 
 /**
