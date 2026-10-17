@@ -131,7 +131,7 @@ export async function POST(
     // 3. Dispatch outbound support email for user record with reply-to routing
     await EmailService.sendSupportEmail({
       conversationId: id,
-      to: customer.email,
+      to: conversationCustomer.email,
       subject: `Re: ${conversation.subject}`,
       bodyText: aiMsg.content,
       merchantId: conversation.merchantId,

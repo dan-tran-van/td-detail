@@ -142,8 +142,13 @@ export default function GmailStyleOutboxPage() {
   const loadEmails = async () => {
     try {
       setLoading(true);
-      const url = showAllSystemEmails ? '/api/outbox?all=true' : '/api/outbox';
-      const res = await fetch(url);
+      const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+      const queryEmail = urlParams.get('customerEmail');
+      let url = showAllSystemEmails ? '/api/outbox?all=true' : '/api/outbox';
+      if (!showAllSystemEmails && queryEmail) {
+        url += `${url.includes('?') ? '&' : '?'}customerEmail=${encodeURIComponent(queryEmail)}`;
+      }
+      const res = await fetch(url, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setEmails(data.emails || []);
