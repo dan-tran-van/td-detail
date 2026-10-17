@@ -1,0 +1,90 @@
+import type { Metadata } from 'next';
+import { Inter, Geist_Mono } from 'next/font/google';
+import './globals.css';
+import React, { Suspense } from 'react';
+import NextLink from 'next/link';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { CartProvider } from '@/context/CartContext';
+import { OrderProvider } from '@/context/OrderContext';
+import { VisitorProvider } from '@/context/VisitorContext';
+import { Header } from '@/components/Header';
+import { cn } from '@/lib/utils';
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
+
+const geistMono = Geist_Mono({
+  variable: '--font-mono',
+  subsets: ['latin'],
+});
+
+export const metadata: Metadata = {
+  title: 'Volt Nest • Modern Tech Accessories & Smart Gadgets (Merchant B)',
+  description:
+    'Premium tech accessories and smart gadgets storefront powered by TD Retail multi-merchant AI customer resolution platform. GaN chargers, earbuds, portable monitors, wearables and hubs.',
+};
+
+import { resolveTDRetailUrl, resolveMerchantId } from '@/lib/config';
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const runtimeApiUrl = resolveTDRetailUrl();
+  const runtimeMerchantId = resolveMerchantId();
+
+  return (
+    <html lang="en" className={cn('dark', 'font-sans', inter.variable)}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__TD_CONFIG = { tdRetailApiUrl: ${JSON.stringify(runtimeApiUrl)}, merchantId: ${JSON.stringify(runtimeMerchantId)} };`,
+          }}
+        />
+      </head>
+      <body
+        className={`${inter.variable} ${geistMono.variable} font-sans antialiased min-h-screen flex flex-col bg-background text-foreground`}
+      >
+        <TooltipProvider>
+          <VisitorProvider>
+            <CartProvider>
+              <OrderProvider>
+                <Suspense fallback={<div className="h-16 w-full border-b border-border bg-background" />}>
+                  <Header />
+                </Suspense>
+                <main className="flex-1 flex flex-col">{children}</main>
+                <footer className="border-t border-border bg-card/50 py-8 px-4 sm:px-6 lg:px-8 mt-auto">
+                  <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground">Volt Nest Storefront</span>
+                      <span>•</span>
+                      <span>Merchant B Demo</span>
+                      <span>•</span>
+                      <span>10-Day Replacement • 1-Year Warranty</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <NextLink href="/policy" className="underline hover:text-foreground transition-colors">
+                        Policy & Warranty
+                      </NextLink>
+                      <span>•</span>
+                      <span>Connected to TD Retail Platform API</span>
+                      <span>•</span>
+                      <a
+                        href={`${runtimeApiUrl.replace(/\/+$/, '')}/inbox`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline hover:text-foreground transition-colors"
+                      >
+                        Support Inbox →
+                      </a>
+                    </div>
+                  </div>
+                </footer>
+              </OrderProvider>
+            </CartProvider>
+          </VisitorProvider>
+        </TooltipProvider>
+      </body>
+    </html>
+  );
+}
