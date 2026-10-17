@@ -17,6 +17,7 @@ import {
   MessageSquare,
   ShieldCheck,
   RefreshCw,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -77,8 +78,11 @@ export default function ConsolidatedInboxPage() {
       const q = searchQuery.toLowerCase();
       const matchSubject = conv.subject.toLowerCase().includes(q);
       const matchMerchant = (conv.merchantName || '').toLowerCase().includes(q);
-      const matchSnippet = conv.lastMessageSnippet.toLowerCase().includes(q);
-      return matchSubject || matchMerchant || matchSnippet;
+      const matchCustomer = (conv.customerName || '').toLowerCase().includes(q) || (conv.customerEmail || '').toLowerCase().includes(q);
+      const matchOrder = (conv.orderId || '').toLowerCase().includes(q);
+      const matchSnippet = (conv.lastMessageSnippet || '').toLowerCase().includes(q);
+      const matchId = (conv.id || '').toLowerCase().includes(q);
+      return matchSubject || matchMerchant || matchCustomer || matchOrder || matchSnippet || matchId;
     }
     return true;
   });
@@ -164,14 +168,14 @@ export default function ConsolidatedInboxPage() {
           </div>
 
           {/* Filter and Search Bar */}
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between p-2 rounded-xl bg-card border border-border">
+          <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 items-stretch sm:items-center justify-between p-2 rounded-xl bg-card border border-border">
             {/* Merchant Filter Pills */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+            <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
               <Button
                 variant={selectedMerchantFilter === 'all' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setSelectedMerchantFilter('all')}
-                className="text-xs h-7 px-2.5 rounded-lg"
+                className="text-xs h-7 px-2.5 rounded-lg shrink-0"
               >
                 All
               </Button>
@@ -186,7 +190,7 @@ export default function ConsolidatedInboxPage() {
                     variant={isSelected ? 'default' : 'ghost'}
                     size="sm"
                     onClick={() => setSelectedMerchantFilter(m.id)}
-                    className="text-xs h-7 px-2.5 rounded-lg gap-1.5"
+                    className="text-xs h-7 px-2.5 rounded-lg gap-1.5 shrink-0"
                   >
                     {isMusic ? (
                       <Disc className="h-3 w-3" />
@@ -204,7 +208,7 @@ export default function ConsolidatedInboxPage() {
               <select
                 value={selectedStatusFilter}
                 onChange={(e) => setSelectedStatusFilter(e.target.value)}
-                className="h-7 rounded-lg border border-border bg-background px-2 text-xs focus:outline-none"
+                className="h-7 rounded-lg border border-border bg-background px-2 text-xs focus:outline-none shrink-0"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -212,15 +216,25 @@ export default function ConsolidatedInboxPage() {
                 <option value="resolved">Resolved</option>
               </select>
 
-              <div className="relative flex-1 sm:w-48">
-                <Search className="h-3.5 w-3.5 absolute left-2.5 top-2 text-muted-foreground" />
+              <div className="relative flex-1 sm:w-56">
+                <Search className="h-3.5 w-3.5 absolute left-2.5 top-2 text-muted-foreground pointer-events-none" />
                 <Input
                   type="text"
-                  placeholder="Filter inquiries..."
+                  placeholder="Search inquiries..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-7 pl-8 text-xs rounded-lg"
+                  className="h-7 pl-8 pr-7 text-xs rounded-lg w-full"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2 top-1.5 text-muted-foreground hover:text-foreground p-0.5 rounded-full"
+                    title="Clear search"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
               </div>
             </div>
           </div>

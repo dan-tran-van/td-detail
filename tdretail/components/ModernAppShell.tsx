@@ -17,6 +17,8 @@ import {
   User,
   AlertTriangle,
   ChevronDown,
+  PanelLeft,
+  PanelLeftClose,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -268,7 +270,15 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">
               TD Support
             </span>
-            <SidebarTrigger className="h-6 w-6 text-muted-foreground hover:text-foreground" />
+            <button
+              type="button"
+              onClick={() => handleOpenChange(!sidebarOpen)}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer flex items-center justify-center shrink-0"
+              title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+              aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            >
+              <PanelLeft className="h-4 w-4" />
+            </button>
           </div>
           <SidebarMenu>
             <SidebarMenuItem>
@@ -437,10 +447,23 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
 
       {/* Main App Content View Area */}
       <SidebarInset className="flex-1 flex flex-col h-full overflow-hidden bg-background">
-        {/* Compact sticky top-bar with sidebar toggle (only visible when sidebar is collapsed) */}
-        <div className="flex items-center h-10 px-3 border-b border-border/60 shrink-0 md:hidden peer-data-[state=expanded]:hidden" data-sidebar-inset-header>
-          <SidebarTrigger className="h-7 w-7 text-muted-foreground" />
-        </div>
+        {/* Compact sticky top-bar with sidebar toggle (visible when sidebar is collapsed on desktop or mobile) */}
+        {!sidebarOpen && (
+          <div className="flex items-center h-10 px-3 border-b border-border/60 shrink-0 bg-card/40 gap-2" data-sidebar-inset-header>
+            <button
+              type="button"
+              onClick={() => handleOpenChange(true)}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer flex items-center justify-center shrink-0"
+              title="Expand sidebar"
+              aria-label="Expand sidebar"
+            >
+              <PanelLeft className="h-4 w-4" />
+            </button>
+            <span className="text-xs font-medium text-muted-foreground truncate">
+              TD Retail Support Platform
+            </span>
+          </div>
+        )}
         {children}
       </SidebarInset>
 
