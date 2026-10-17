@@ -98,7 +98,7 @@ export async function POST(
 
     // 1. Save customer message
     const customerMsg: Message = {
-      id: `msg_cust_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: `msg_cust_${crypto.randomUUID()}`,
       conversationId: id,
       sender: 'customer',
       senderName: customer.name,

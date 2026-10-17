@@ -267,7 +267,7 @@ CRITICAL RULES:
     }
 
     const aiMessage: Message = {
-      id: `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: `msg_ai_${crypto.randomUUID()}`,
       conversationId: conversation.id,
       sender: 'ai',
       senderName: `${merchant.name} Gemini AI`,
@@ -325,7 +325,7 @@ CRITICAL RULES:
       };
 
       const aiMsg: Message = {
-        id: `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        id: `msg_ai_${crypto.randomUUID()}`,
         conversationId: conversation.id,
         sender: 'ai',
         senderName: `${merchant.name} Gemini Assistant`,
@@ -367,7 +367,7 @@ CRITICAL RULES:
       }
 
       const aiMsg: Message = {
-        id: `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        id: `msg_ai_${crypto.randomUUID()}`,
         conversationId: conversation.id,
         sender: 'ai',
         senderName: `${merchant.name} Gemini Assistant`,
@@ -417,7 +417,7 @@ CRITICAL RULES:
         // Safe rejection response
         const errorContent = `I checked our order database for **${orderIdToLookup}**: ${lookupResult.error}`;
         const aiMsg: Message = {
-          id: `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          id: `msg_ai_${crypto.randomUUID()}`,
           conversationId: conversation.id,
           sender: 'ai',
           senderName: `${merchant.name} Gemini Assistant`,
@@ -459,7 +459,7 @@ CRITICAL RULES:
       }
 
       const aiMsg: Message = {
-        id: `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        id: `msg_ai_${crypto.randomUUID()}`,
         conversationId: conversation.id,
         sender: 'ai',
         senderName: `${merchant.name} Gemini Assistant`,
@@ -487,7 +487,7 @@ CRITICAL RULES:
       `To check an order, please provide your Order ID (such as \`#ORD-MUS-8821\` or \`#ORD-GROC-5512\`), or click "Request Human Assistance" if you need immediate human review.`;
 
     const aiMsg: Message = {
-      id: `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: `msg_ai_${crypto.randomUUID()}`,
       conversationId: conversation.id,
       sender: 'ai',
       senderName: `${merchant.name} Gemini Assistant`,

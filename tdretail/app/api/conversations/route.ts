@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const convId = `conv_${merchant.category === 'digital_music' ? 'music' : 'grocery'}_${Date.now().toString(36)}`;
+    const convId = `conv_${merchant.category === 'digital_music' ? 'music' : 'grocery'}_${crypto.randomUUID()}`;
     const now = new Date().toISOString();
 
     const newConv: Conversation = {
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
 
     if (initialMessage && initialMessage.trim()) {
       customerMsg = {
-        id: `msg_cust_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        id: `msg_cust_${crypto.randomUUID()}`,
         conversationId: convId,
         sender: 'customer',
         senderName: customer.name,

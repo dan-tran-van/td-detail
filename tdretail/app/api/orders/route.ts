@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     const customerId = body.customerId || (customerEmail ? `cust_${customerEmail.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}` : customer.id);
 
     const newOrder: Order = {
-      id: body.id || `order_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: body.id || `order_${crypto.randomUUID()}`,
       orderId: body.orderId || `ORD-${body.merchantId === 'merchant_music' ? 'MUS' : 'GROC'}-${Math.floor(1000 + Math.random() * 9000)}`,
       merchantId: body.merchantId || 'merchant_music',
       customerId: customerId,
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       orderStatusDisplay: body.orderStatusDisplay || 'Order Confirmed & Processing',
       totalAmount: body.totalAmount ?? 19.99,
       currency: body.currency || 'INR',
-      trackingNumber: body.trackingNumber || `TRK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+      trackingNumber: body.trackingNumber || `TRK-${crypto.randomUUID().substring(0, 8).toUpperCase()}`,
       carrierOrCourier: body.carrierOrCourier || 'SoundWave Instant Cloud Delivery',
       estimatedDelivery: body.estimatedDelivery || 'Immediate (Instant Access)',
       deliveryAddress: body.deliveryAddress || `Digital Vault (${customerEmail})`,

@@ -54,7 +54,7 @@ export class EmailService {
     `;
 
     const emailRecord: OutboxEmail = {
-      id: `email_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: `email_${crypto.randomUUID()}`,
       conversationId,
       merchantId,
       merchantName,
@@ -174,7 +174,7 @@ export class EmailService {
 
     // Ingest the customer reply
     const customerMsg: Message = {
-      id: `msg_inbound_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: `msg_inbound_${crypto.randomUUID()}`,
       conversationId,
       sender: 'customer',
       senderName: conversation.customerName,

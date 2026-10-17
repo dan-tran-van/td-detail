@@ -36,7 +36,7 @@ export async function POST(
 
     // System audit message in thread
     const systemMsg: Message = {
-      id: `msg_sys_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: `msg_sys_${crypto.randomUUID()}`,
       conversationId: id,
       sender: 'system',
       senderName: 'TD Retail Escalation Dispatch',
