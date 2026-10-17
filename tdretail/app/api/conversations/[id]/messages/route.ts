@@ -96,22 +96,30 @@ export async function POST(
 
     const now = new Date().toISOString();
 
-    // 1. Save customer message
+    // 1. Save customer message using the conversation's established customer profile
+    const senderCustomerName = conversation.customerName || customer.name;
     const customerMsg: Message = {
       id: `msg_cust_${crypto.randomUUID()}`,
       conversationId: id,
       sender: 'customer',
-      senderName: customer.name,
+      senderName: senderCustomerName,
       content: content.trim(),
       timestamp: now,
     };
     await TDStore.addMessage(customerMsg);
 
     // 2. Process with Gemini Agent
+    const conversationCustomer = {
+      ...customer,
+      id: conversation.customerId || customer.id,
+      name: conversation.customerName || customer.name,
+      email: conversation.customerEmail || customer.email,
+    };
+
     const aiMsg = await GeminiAgentService.processMessage({
       conversation,
       customerMessage: content.trim(),
-      customer,
+      customer: conversationCustomer,
     });
 
     // 3. Dispatch outbound support email for user record with reply-to routing

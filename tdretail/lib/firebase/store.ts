@@ -190,16 +190,55 @@ export class TDStore {
 
   // --- Customers ---
   static async getCustomer(id: string): Promise<Customer | null> {
+    const firestore = await this.getFirestoreClient();
+    if (firestore) {
+      try {
+        const doc = await firestore.collection('customers').doc(id).get();
+        if (doc.exists) return doc.data() as Customer;
+      } catch (e) {
+        console.warn(`[Store] Firestore error fetching customer ${id}:`, e);
+      }
+    }
     const state = loadState();
     return state.customers[id] || null;
   }
 
   static async getCustomerByEmail(email: string): Promise<Customer | null> {
+    const firestore = await this.getFirestoreClient();
+    if (firestore) {
+      try {
+        const snap = await firestore
+          .collection('customers')
+          .where('email', '==', email.toLowerCase())
+          .limit(1)
+          .get();
+        if (!snap.empty) {
+          return snap.docs[0].data() as Customer;
+        }
+      } catch (e) {
+        console.warn(`[Store] Firestore error fetching customer by email ${email}:`, e);
+      }
+    }
     const state = loadState();
     const found = Object.values(state.customers).find(
       (c) => c.email.toLowerCase() === email.toLowerCase()
     );
     return found || null;
+  }
+
+  static async upsertCustomer(customer: Customer): Promise<Customer> {
+    const firestore = await this.getFirestoreClient();
+    if (firestore) {
+      try {
+        await firestore.collection('customers').doc(customer.id).set(customer, { merge: true });
+      } catch (e) {
+        console.warn(`[Store] Firestore write error for customer ${customer.id}:`, e);
+      }
+    }
+    const state = loadState();
+    state.customers[customer.id] = customer;
+    saveState();
+    return customer;
   }
 
   // --- Orders ---

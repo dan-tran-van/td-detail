@@ -19,9 +19,9 @@ const INITIAL_DEMO_ORDERS: Order[] = [
     id: 'order_mus_8821',
     orderId: 'ORD-MUS-8821',
     merchantId: 'merchant_music',
-    customerId: 'cust_sarah_connor',
-    customerEmail: 'sarah.connor@example.com',
-    customerName: 'Sarah Connor',
+    customerId: 'cust_guest',
+    customerEmail: 'guest@soundwave.store',
+    customerName: 'SoundWave Guest',
     items: [
       {
         id: 'item_mus_1',
@@ -42,7 +42,7 @@ const INITIAL_DEMO_ORDERS: Order[] = [
     trackingNumber: 'DIGITAL-DL-8821-OK',
     carrierOrCourier: 'SoundWave Cloud Vault (High Speed CDN)',
     estimatedDelivery: 'Immediate (Instant Access)',
-    deliveryAddress: 'Digital Vault (sarah.connor@example.com)',
+    deliveryAddress: 'Digital Vault (guest@soundwave.store)',
     courierNotes: 'Files verified md5 checksum matching. 5 remaining direct download attempts allowed.',
     createdAt: '2026-10-14T12:00:00Z',
     updatedAt: '2026-10-14T12:05:00Z',
@@ -51,9 +51,9 @@ const INITIAL_DEMO_ORDERS: Order[] = [
     id: 'order_mus_9042',
     orderId: 'ORD-MUS-9042',
     merchantId: 'merchant_music',
-    customerId: 'cust_sarah_connor',
-    customerEmail: 'sarah.connor@example.com',
-    customerName: 'Sarah Connor',
+    customerId: 'cust_guest',
+    customerEmail: 'guest@soundwave.store',
+    customerName: 'SoundWave Guest',
     items: [
       {
         id: 'item_mus_2',
@@ -74,49 +74,64 @@ const INITIAL_DEMO_ORDERS: Order[] = [
     trackingNumber: 'DIGITAL-GEN-9042-PENDING',
     carrierOrCourier: 'SoundWave Key Generator Engine',
     estimatedDelivery: 'Within 5-10 minutes',
-    deliveryAddress: 'Digital Vault (sarah.connor@example.com)',
+    deliveryAddress: 'Digital Vault (guest@soundwave.store)',
     courierNotes: 'Audio stems encoded. Awaiting licensing authority digital signature.',
     createdAt: '2026-10-15T09:30:00Z',
     updatedAt: '2026-10-15T09:30:00Z',
   },
 ];
 
+import { useVisitor } from '@/context/VisitorContext';
+
 export function OrderProvider({ children }: { children: React.ReactNode }) {
+  const { visitor, isLoaded: isVisitorLoaded } = useVisitor();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Isolate orders per visitor
+  const visitorStorageKey = `${ORDERS_STORAGE_KEY}_${visitor.id}`;
+
   useEffect(() => {
+    if (!isVisitorLoaded) return;
     try {
-      const stored = localStorage.getItem(ORDERS_STORAGE_KEY);
+      const stored = localStorage.getItem(visitorStorageKey);
+      // Map seed orders to active visitor
+      const personalizedSeedOrders: Order[] = INITIAL_DEMO_ORDERS.map((demo) => ({
+        ...demo,
+        customerId: visitor.id,
+        customerEmail: visitor.email,
+        customerName: visitor.name,
+        deliveryAddress: `Digital Vault (${visitor.email})`,
+      }));
+
       if (stored) {
         const parsed: Order[] = JSON.parse(stored);
-        // Merge initial demo orders if not already present
         const merged = [...parsed];
-        for (const demoOrder of INITIAL_DEMO_ORDERS) {
+        for (const demoOrder of personalizedSeedOrders) {
           if (!merged.some((o) => o.orderId === demoOrder.orderId)) {
             merged.push(demoOrder);
           }
         }
         setOrders(merged);
       } else {
-        setOrders(INITIAL_DEMO_ORDERS);
+        setOrders(personalizedSeedOrders);
       }
     } catch (e) {
       console.warn('Could not read orders from localStorage', e);
-      setOrders(INITIAL_DEMO_ORDERS);
+      setOrders([]);
     } finally {
       setIsLoaded(true);
     }
-  }, []);
+  }, [isVisitorLoaded, visitor.id, visitor.email, visitor.name, visitorStorageKey]);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || !isVisitorLoaded) return;
     try {
-      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+      localStorage.setItem(visitorStorageKey, JSON.stringify(orders));
     } catch (e) {
       console.warn('Could not save orders to localStorage', e);
     }
-  }, [orders, isLoaded]);
+  }, [orders, isLoaded, isVisitorLoaded, visitorStorageKey]);
 
   const saveOrder = (order: Order) => {
     setOrders((prev) => [order, ...prev.filter((o) => o.orderId !== order.orderId)]);

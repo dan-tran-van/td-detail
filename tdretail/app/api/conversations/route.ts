@@ -34,9 +34,24 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const customer = await getCurrentCustomer();
     const body = await req.json();
-    const { merchantId, orderId, subject, initialMessage } = body;
+    const { merchantId, orderId, subject, initialMessage, customerEmail: bodyEmail, customerName: bodyName, customerId: bodyId } = body;
+
+    let customer = await getCurrentCustomer();
+    // If request originates from music-merchant with visitor identity, use that visitor's identity!
+    if (bodyEmail) {
+      const email = bodyEmail.trim().toLowerCase();
+      let visitorCustomer = await TDStore.getCustomerByEmail(email);
+      if (!visitorCustomer) {
+        visitorCustomer = await TDStore.upsertCustomer({
+          id: bodyId || `cust_${email.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`,
+          name: bodyName?.trim() || email.split('@')[0],
+          email,
+          createdAt: new Date().toISOString(),
+        });
+      }
+      customer = visitorCustomer;
+    }
 
     if (!merchantId || !subject?.trim()) {
       return NextResponse.json(

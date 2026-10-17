@@ -33,6 +33,7 @@ import {
   sendFollowupMessage,
 } from '@/lib/api-sync';
 import { SupportMessage, SupportConversation } from '@/lib/types';
+import { useVisitor } from '@/context/VisitorContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -48,6 +49,7 @@ export function SupportChatWidget({
   onClose,
   initialOrderId,
 }: SupportChatWidgetProps) {
+  const { visitor } = useVisitor();
   const [conversation, setConversation] = useState<SupportConversation | null>(null);
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [inputText, setInputText] = useState('');
@@ -89,8 +91,8 @@ export function SupportChatWidget({
       orderId,
       subject,
       initialMessage,
-      customerEmail: 'sarah.connor@example.com',
-      customerName: 'Sarah Connor',
+      customerEmail: visitor.email,
+      customerName: visitor.name,
     });
 
     if (result.success && result.conversation) {
@@ -100,7 +102,7 @@ export function SupportChatWidget({
           id: `msg_cust_${Date.now()}`,
           conversationId: result.conversation.id,
           sender: 'customer',
-          senderName: 'Sarah Connor',
+          senderName: visitor.name,
           content: initialMessage,
           timestamp: new Date().toISOString(),
         },
@@ -130,7 +132,7 @@ export function SupportChatWidget({
       id: `msg_cust_${Date.now()}`,
       conversationId: conversation.id,
       sender: 'customer',
-      senderName: 'Sarah Connor',
+      senderName: visitor.name,
       content: userText,
       timestamp: new Date().toISOString(),
     };
@@ -304,8 +306,8 @@ export function SupportChatWidget({
             <a
               href={
                 conversation?.id
-                  ? `${process.env.NEXT_PUBLIC_TD_RETAIL_API_URL || 'http://localhost:3000'}/chat/${conversation.id}`
-                  : `${process.env.NEXT_PUBLIC_TD_RETAIL_API_URL || 'http://localhost:3000'}/inbox`
+                  ? `${process.env.NEXT_PUBLIC_TD_RETAIL_API_URL || 'http://localhost:3000'}/chat/${conversation.id}?customerEmail=${encodeURIComponent(visitor.email)}&customerName=${encodeURIComponent(visitor.name)}&customerId=${encodeURIComponent(visitor.id)}`
+                  : `${process.env.NEXT_PUBLIC_TD_RETAIL_API_URL || 'http://localhost:3000'}/inbox?customerEmail=${encodeURIComponent(visitor.email)}&customerName=${encodeURIComponent(visitor.name)}&customerId=${encodeURIComponent(visitor.id)}`
               }
               target="_blank"
               rel="noopener noreferrer"

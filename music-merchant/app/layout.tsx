@@ -5,6 +5,7 @@ import React, { Suspense } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CartProvider } from '@/context/CartContext';
 import { OrderProvider } from '@/context/OrderContext';
+import { VisitorProvider } from '@/context/VisitorContext';
 import { Header } from '@/components/Header';
 import { cn } from "@/lib/utils";
 
@@ -30,11 +31,12 @@ export default function RootLayout({
     <html lang="en" className={cn("dark", "font-sans", inter.variable)}>
       <body className={`${inter.variable} ${geistMono.variable} font-sans antialiased min-h-screen flex flex-col bg-background text-foreground`}>
         <TooltipProvider>
-          <CartProvider>
-            <OrderProvider>
-              <Suspense fallback={<div className="h-16 w-full border-b border-border bg-background" />}>
-                <Header />
-              </Suspense>
+          <VisitorProvider>
+            <CartProvider>
+              <OrderProvider>
+                <Suspense fallback={<div className="h-16 w-full border-b border-border bg-background" />}>
+                  <Header />
+                </Suspense>
               <main className="flex-1 flex flex-col">
                 {children}
               </main>
@@ -61,6 +63,7 @@ export default function RootLayout({
               </footer>
             </OrderProvider>
           </CartProvider>
+          </VisitorProvider>
         </TooltipProvider>
       </body>
     </html>

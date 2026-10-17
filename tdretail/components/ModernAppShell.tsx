@@ -126,8 +126,9 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
 
   const fetchData = async () => {
     try {
-      // 1. Session
-      const sessRes = await fetch('/api/session');
+      // 1. Session - Pass any customerEmail/customerId query params from external links
+      const urlQuery = typeof window !== 'undefined' ? window.location.search : '';
+      const sessRes = await fetch(`/api/session${urlQuery}`);
       if (sessRes.ok) {
         const sData = await sessRes.json();
         setCustomer(sData.customer);

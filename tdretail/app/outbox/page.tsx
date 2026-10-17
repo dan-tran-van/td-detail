@@ -103,7 +103,8 @@ export default function GmailStyleOutboxPage() {
 
   const loadSession = async () => {
     try {
-      const res = await fetch('/api/session');
+      const urlQuery = typeof window !== 'undefined' ? window.location.search : '';
+      const res = await fetch(`/api/session${urlQuery}`);
       if (res.ok) {
         const data = await res.json();
         setCustomer(data.customer);
