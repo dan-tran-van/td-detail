@@ -194,7 +194,7 @@ function MerchantLayoutInner({ children }: { children: React.ReactNode }) {
                       <Disc className="h-4 w-4 text-primary shrink-0" />
                       <div className="flex-1 truncate">
                         <div className="text-xs font-medium text-foreground">SoundWave Digital</div>
-                        <div className="text-[10px] text-muted-foreground">Port 3001 (Merchant A)</div>
+                        <div className="text-[10px] text-muted-foreground">Digital Music Store (Merchant A)</div>
                       </div>
                       {(session?.merchant?.id === 'merchant_music' || session?.merchant?.id === 'merchant_a') && (
                         <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
@@ -208,7 +208,7 @@ function MerchantLayoutInner({ children }: { children: React.ReactNode }) {
                       <Zap className="h-4 w-4 text-primary shrink-0" />
                       <div className="flex-1 truncate">
                         <div className="text-xs font-medium text-foreground">Volt Nest Storefront</div>
-                        <div className="text-[10px] text-muted-foreground">Port 3002 (Merchant B)</div>
+                        <div className="text-[10px] text-muted-foreground">Consumer Tech Store (Merchant B)</div>
                       </div>
                       {session?.merchant?.id === 'merchant_b' && (
                         <CheckCircle2 className="h-3.5 w-3.5 text-primary" />

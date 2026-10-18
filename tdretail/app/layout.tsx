@@ -9,9 +9,14 @@ const sourceSans3Heading = Source_Sans_3({subsets:['latin'],variable:'--font-hea
 const ibmPlexSans = IBM_Plex_Sans({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: 'TD Retail | Shared Customer Support Platform & Gemini Agent',
+  title: 'TD Retail | Autonomous Multi-Merchant Customer Operations Platform',
   description:
-    'Consolidated multi-merchant customer support inbox powered by Google Gemini, server-grounded order tools, and SendGrid email reply routing.',
+    'Unified customer support and resolution engine for multi-brand retail ecosystems. Server-grounded order tools, multi-tenant isolation, and SendGrid email relay.',
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({

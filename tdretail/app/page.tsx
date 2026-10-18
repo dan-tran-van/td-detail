@@ -55,6 +55,7 @@ import { LiveConsoleShowcase } from '@/components/LiveConsoleShowcase';
 import { MultiTenantPipeline } from '@/components/MultiTenantPipeline';
 import { OmnichannelRelayVisualizer } from '@/components/OmnichannelRelayVisualizer';
 import { resolveStorefrontUrl } from '@/lib/storefrontConfig';
+import { TDLogo } from '@/components/TDLogo';
 
 export default function LandingPage() {
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -254,7 +255,7 @@ export default function LandingPage() {
                 </span>
               </h1>
               <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed font-normal">
-                Unified AI service infrastructure for multi-brand retail ecosystems. Seamlessly orchestrate real-time order lookups, automated fulfillment actions, and multi-tenant workflows with zero hallucinations.
+                The shared customer-facing support network for modern commerce. Customers access one unified platform across multiple merchants, while each merchant retains sovereign control over its data, workflows, and AI intelligence.
               </p>
             </div>
 
@@ -263,7 +264,7 @@ export default function LandingPage() {
               <NextLink href="/chat/new?merchantId=merchant_music">
                 <Button size="lg" className="h-12 px-7 rounded-full gap-2 bg-primary text-primary-foreground font-semibold shadow-md hover:opacity-95 transition-all hover:scale-102 cursor-pointer">
                   <Sparkles className="h-4 w-4" />
-                  <span>Launch Live Agent Demo</span>
+                  <span>Launch Live AI Chat</span>
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </NextLink>
@@ -412,6 +413,82 @@ export default function LandingPage() {
                 <Server className="h-4 w-4 text-emerald-500" />
                 <span className="font-bold text-sm tracking-tight text-foreground">Cloud Fleet</span>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 2.5 The Support Network Shift: Siloed Inboxes vs. Shared Support Network */}
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full space-y-8">
+          <div className="text-center space-y-3 max-w-3xl mx-auto">
+            <Badge variant="outline" className="text-xs uppercase tracking-wider text-primary border-primary/30">
+              The Support Network Paradigm
+            </Badge>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+              Unlike siloed helpdesks, we&apos;re building a{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-indigo-600 to-purple-600">
+                shared customer-facing support network.
+              </span>
+            </h2>
+            <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+              Traditional customer-support platforms help each merchant manage its own isolated inbox. TD Retail connects customers to one unified platform across multiple merchants, while each merchant retains sovereign control over its data, workflows, and AI intelligence.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+            {/* Left: Traditional Helpdesk */}
+            <div className="p-6 sm:p-8 rounded-3xl border border-border/80 bg-muted/30 space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Traditional Helpdesk Model</span>
+                <Badge variant="outline" className="text-[10px] text-muted-foreground">Siloed & Fragmented</Badge>
+              </div>
+              <ul className="space-y-3 text-xs sm:text-sm text-muted-foreground">
+                <li className="flex items-start gap-2.5">
+                  <span className="text-red-500 font-bold text-sm shrink-0">✕</span>
+                  <span><strong>Fragmented logins:</strong> Shoppers must create and remember separate accounts for every individual store they purchase from.</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <span className="text-red-500 font-bold text-sm shrink-0">✕</span>
+                  <span><strong>Isolated inboxes:</strong> Customer order history and context are split across multiple disparate Zendesk or Gorgias desks.</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <span className="text-red-500 font-bold text-sm shrink-0">✕</span>
+                  <span><strong>Hallucination vulnerability:</strong> Disconnected bots speculate on order status or policy without validated store APIs.</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <span className="text-red-500 font-bold text-sm shrink-0">✕</span>
+                  <span><strong>High per-seat overhead:</strong> Merchants pay per human seat, disincentivizing cross-functional collaboration.</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Right: TD Retail Shared Network */}
+            <div className="p-6 sm:p-8 rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/5 via-card to-card shadow-lg space-y-5 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-center justify-between pb-3 border-b border-border/60 relative">
+                <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                  <Network className="h-4 w-4" />
+                  <span>TD Retail Support Network</span>
+                </span>
+                <Badge className="text-[10px] bg-primary text-primary-foreground font-bold">Shared & Sovereign</Badge>
+              </div>
+              <ul className="space-y-3 text-xs sm:text-sm text-foreground/90 relative">
+                <li className="flex items-start gap-2.5">
+                  <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <span><strong>Unified customer nexus:</strong> Shoppers access one centralized interface for all orders, digital licenses, and support threads.</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <span><strong>Total merchant sovereignty:</strong> Each store retains independent control over its proprietary database, policies, and staff workflows.</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <span><strong>Zero-hallucination tool grounding:</strong> Autonomous AI executes real verified functions (<code className="text-xs font-mono">lookupOrderStatus</code>) on live store APIs.</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <span><strong>Bi-directional operations:</strong> Fulfillment updates in the Merchant Portal and specialist escalations sync immediately.</span>
+                </li>
+              </ul>
             </div>
           </div>
         </section>
@@ -1231,6 +1308,15 @@ export default function LandingPage() {
           </div>
 
           <Accordion className="w-full bg-card/60 backdrop-blur border border-border/80 rounded-2xl shadow-sm">
+            <AccordionItem value="item-network-diff">
+              <AccordionTrigger className="text-base font-semibold px-6 py-5">
+                How does TD Retail differ from traditional customer support platforms?
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-6 text-sm text-muted-foreground leading-relaxed">
+                Unlike traditional customer-support platforms that help each merchant manage its own support inbox, we&apos;re building a <strong>shared customer-facing support network</strong>: customers access one unified platform across multiple merchants, while each merchant retains control over its own data, workflows, and AI intelligence. Shoppers get a seamless, single-login support experience, while stores keep their proprietary order data, fulfillment rules, and escalation paths completely sovereign.
+              </AccordionContent>
+            </AccordionItem>
+
             <AccordionItem value="item-1">
               <AccordionTrigger className="text-base font-semibold px-6 py-5">
                 How does TD Retail prevent cross-tenant data leakage?
@@ -1347,7 +1433,7 @@ export default function LandingPage() {
               <NextLink href="/chat/new?merchantId=merchant_music">
                 <Button variant="ghost" size="lg" className="h-12 px-6 rounded-full gap-2 text-muted-foreground hover:text-foreground cursor-pointer">
                   <Sparkles className="h-4 w-4 text-primary" />
-                  <span>Try Demo Chat</span>
+                  <span>Try Beta Chat</span>
                 </Button>
               </NextLink>
             </div>
@@ -1370,11 +1456,9 @@ export default function LandingPage() {
             />
 
             <DialogContent className="sm:max-w-md p-0 overflow-hidden rounded-3xl border border-border shadow-2xl bg-card">
-              <div className="p-4 bg-primary text-primary-foreground flex items-center justify-between">
+              <div className="p-4 pr-14 bg-primary text-primary-foreground flex items-center justify-between relative">
                 <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-full bg-primary-foreground/20 flex items-center justify-center font-bold text-sm">
-                    TD
-                  </div>
+                  <TDLogo size="sm" className="bg-primary-foreground/10 p-0.5 rounded-lg shrink-0" />
                   <div>
                     <h3 className="font-bold text-sm leading-none">TD Retail Platform Support</h3>
                     <p className="text-[11px] text-primary-foreground/80 mt-1">Autonomous Customer Desk • Online</p>
@@ -1384,7 +1468,7 @@ export default function LandingPage() {
                 {activeConversationId ? (
                   <NextLink
                     href={`/chat/${activeConversationId}`}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-foreground hover:underline bg-primary-foreground/10 px-2.5 py-1 rounded-full transition-colors"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-foreground hover:underline bg-primary-foreground/15 hover:bg-primary-foreground/25 px-2.5 py-1 rounded-full transition-colors shrink-0 mr-1"
                   >
                     <span>Open in Inbox</span>
                     <ArrowUpRight className="h-3 w-3" />
@@ -1392,7 +1476,7 @@ export default function LandingPage() {
                 ) : (
                   <NextLink
                     href="/inbox"
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-foreground hover:underline bg-primary-foreground/10 px-2.5 py-1 rounded-full transition-colors"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-foreground hover:underline bg-primary-foreground/15 hover:bg-primary-foreground/25 px-2.5 py-1 rounded-full transition-colors shrink-0 mr-1"
                   >
                     <span>All Chats</span>
                     <ArrowUpRight className="h-3 w-3" />

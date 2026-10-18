@@ -23,6 +23,7 @@ import {
 import { resolveStorefrontUrl } from '@/lib/storefrontConfig';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { TDLogo } from '@/components/TDLogo';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -47,15 +48,10 @@ export function Navbar() {
   return (
     <div className="fixed top-3 sm:top-4 inset-x-0 z-50 flex justify-center px-3 sm:px-6 pointer-events-none">
       <header className="pointer-events-auto w-full max-w-7xl rounded-full border border-border/80 bg-background/80 shadow-lg shadow-black/5 backdrop-blur-xl transition-all duration-300 hover:border-border/95 px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3 sm:gap-6">
-        {/* Brand Logo & Platform Title */}
+        {/* Brand Logo & Platform Title with Cool Vector TDLogo */}
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-          <NextLink href="/" className="flex items-center gap-2.5 group">
-            <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform text-xs">
-              TD
-            </div>
-            <span className="font-bold text-sm sm:text-base tracking-tight text-foreground">
-              Retail
-            </span>
+          <NextLink href="/" className="flex items-center group cursor-pointer">
+            <TDLogo size="sm" showWordmark />
           </NextLink>
         </div>
 
@@ -88,7 +84,7 @@ export function Navbar() {
                           <span className="flex items-center gap-1.5">
                             SoundWave Digital
                             <Badge variant="outline" className="text-[9px] py-0 px-1 text-indigo-500 border-indigo-500/30">
-                              Port 3001
+                              Digital Audio
                             </Badge>
                           </span>
                           <ExternalLink className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -113,7 +109,7 @@ export function Navbar() {
                           <span className="flex items-center gap-1.5">
                             Volt Nest
                             <Badge variant="outline" className="text-[9px] py-0 px-1 text-cyan-500 border-cyan-500/30">
-                              Port 3002
+                              Smart Hardware
                             </Badge>
                           </span>
                           <ExternalLink className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -153,34 +149,80 @@ export function Navbar() {
                 </NavigationMenuContent>
               </NavigationMenuItem>
 
-              {/* Chat & Inbox Direct Link */}
+              {/* Grouped Features (Beta) Dropdown */}
               <NavigationMenuItem>
-                <NavigationMenuLink
-                  render={<NextLink href="/inbox" />}
-                  className={`h-8 px-3 rounded-full text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
-                    pathname?.startsWith('/inbox') || isChatView
-                      ? 'bg-muted text-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
-                  }`}
-                >
-                  <MessageSquare className="h-3.5 w-3.5 shrink-0" />
-                  <span className="whitespace-nowrap">Chat & Inbox</span>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
+                <NavigationMenuTrigger className="h-8 px-3 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground bg-transparent hover:bg-muted/60 data-popup-open:bg-muted/80 whitespace-nowrap shrink-0">
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5 shrink-0 text-primary" />
+                  <span className="whitespace-nowrap">Features (Beta)</span>
+                </NavigationMenuTrigger>
+                <NavigationMenuContent className="p-3 w-88 bg-popover/95 backdrop-blur-md border border-border rounded-2xl shadow-xl">
+                  <div className="space-y-1">
+                    {/* 1. Evaluation Guide (Featured for Evaluators) */}
+                    <NavigationMenuLink
+                      render={<NextLink href="/beta-guide" />}
+                      className="flex items-start gap-2.5 p-2 rounded-xl bg-primary/5 hover:bg-primary/10 border border-primary/20 transition-colors cursor-pointer group mb-1.5"
+                    >
+                      <div className="h-8 w-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                        <Sparkles className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold text-foreground flex items-center justify-between">
+                          <span>Beta Architecture Guide</span>
+                          <Badge className="text-[9px] py-0 px-1.5 bg-primary text-primary-foreground font-bold">Start Here</Badge>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground leading-tight">Shared support network & 3 live sites roadmap</p>
+                      </div>
+                    </NavigationMenuLink>
 
-              {/* Outbox & Webhooks Link */}
-              <NavigationMenuItem>
-                <NavigationMenuLink
-                  render={<NextLink href="/outbox" />}
-                  className={`h-8 px-3 rounded-full text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
-                    pathname === '/outbox'
-                      ? 'bg-muted text-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
-                  }`}
-                >
-                  <Mail className="h-3.5 w-3.5 shrink-0" />
-                  <span className="whitespace-nowrap">Outbox</span>
-                </NavigationMenuLink>
+                    {/* 2. Chat & Unified Inbox */}
+                    <NavigationMenuLink
+                      render={<NextLink href="/inbox" />}
+                      className={`flex items-start gap-2.5 p-2 rounded-xl hover:bg-muted transition-colors cursor-pointer group ${
+                        pathname?.startsWith('/inbox') || isChatView ? 'bg-muted' : ''
+                      }`}
+                    >
+                      <div className="h-8 w-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0 mt-0.5">
+                        <MessageSquare className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold text-foreground">Chat & Unified Inbox</div>
+                        <p className="text-[11px] text-muted-foreground leading-tight">Multi-brand customer conversations & transcripts</p>
+                      </div>
+                    </NavigationMenuLink>
+
+                    {/* 3. Email Outbox & Webhooks */}
+                    <NavigationMenuLink
+                      render={<NextLink href="/outbox" />}
+                      className={`flex items-start gap-2.5 p-2 rounded-xl hover:bg-muted transition-colors cursor-pointer group ${
+                        pathname === '/outbox' ? 'bg-muted' : ''
+                      }`}
+                    >
+                      <div className="h-8 w-8 rounded-lg bg-sky-500/10 text-sky-500 flex items-center justify-center shrink-0 mt-0.5">
+                        <Mail className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold text-foreground">Email Outbox & Relay</div>
+                        <p className="text-[11px] text-muted-foreground leading-tight">SendGrid dispatch audit & inbound reply simulation</p>
+                      </div>
+                    </NavigationMenuLink>
+
+                    {/* 4. Merchant Operations Portal */}
+                    <NavigationMenuLink
+                      render={<NextLink href="/merchant" />}
+                      className={`flex items-start gap-2.5 p-2 rounded-xl hover:bg-muted transition-colors cursor-pointer group ${
+                        pathname?.startsWith('/merchant') ? 'bg-muted' : ''
+                      }`}
+                    >
+                      <div className="h-8 w-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0 mt-0.5">
+                        <Store className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold text-foreground">Merchant Operations Portal</div>
+                        <p className="text-[11px] text-muted-foreground leading-tight">Order fulfillment mutator, escalations & policies</p>
+                      </div>
+                    </NavigationMenuLink>
+                  </div>
+                </NavigationMenuContent>
               </NavigationMenuItem>
 
               {/* Pricing & Subscriptions Link */}
@@ -198,21 +240,6 @@ export function Navbar() {
                   <Badge variant="secondary" className="text-[9px] py-0 px-1 font-mono text-emerald-500 font-bold ml-0.5">
                     Free
                   </Badge>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-
-              {/* Merchant Portal Link */}
-              <NavigationMenuItem>
-                <NavigationMenuLink
-                  render={<NextLink href="/merchant" />}
-                  className={`h-8 px-3 rounded-full text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
-                    pathname?.startsWith('/merchant')
-                      ? 'bg-muted text-foreground font-semibold'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
-                  }`}
-                >
-                  <Store className="h-3.5 w-3.5 shrink-0 text-primary" />
-                  <span className="whitespace-nowrap">Merchant Portal</span>
                 </NavigationMenuLink>
               </NavigationMenuItem>
 
@@ -269,14 +296,29 @@ export function Navbar() {
               <SheetContent side="top" className="rounded-b-3xl border-border bg-background/95 backdrop-blur-xl pt-6 pb-8">
                 <SheetHeader className="text-left pb-4 border-b border-border">
                   <SheetTitle className="text-sm font-bold flex items-center gap-2">
-                    <span className="h-7 w-7 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">
-                      TD
-                    </span>
-                    <span>TD Retail Navigation</span>
+                    <TDLogo size="sm" showWordmark />
                   </SheetTitle>
                 </SheetHeader>
 
                 <div className="pt-4 space-y-4">
+                  {/* Featured Beta Guide for Evaluators */}
+                  <NextLink
+                    href="/beta-guide"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center justify-between p-3 rounded-2xl bg-primary/10 border border-primary/25 hover:bg-primary/15 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-7 w-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center text-xs">
+                        <Sparkles className="h-3.5 w-3.5" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-foreground">Beta Architecture Guide</div>
+                        <div className="text-[10px] text-muted-foreground">Shared support network & 3 live sites roadmap</div>
+                      </div>
+                    </div>
+                    <Badge className="text-[9px] py-0 px-1.5 bg-primary text-primary-foreground font-bold">Start Here</Badge>
+                  </NextLink>
+
                   <div className="space-y-1">
                     <p className="text-[11px] font-semibold text-muted-foreground uppercase px-2 tracking-wider">
                       Storefronts
@@ -364,7 +406,7 @@ export function Navbar() {
                     <NextLink href="/chat/new?merchantId=merchant_music" onClick={() => setMobileOpen(false)}>
                       <Button className="w-full rounded-full gap-2 text-xs font-semibold bg-primary text-primary-foreground h-10">
                         <Sparkles className="h-4 w-4" />
-                        <span>Launch Interactive Demo</span>
+                        <span>Launch Live AI Chat</span>
                         <ArrowRight className="h-4 w-4 ml-auto" />
                       </Button>
                     </NextLink>

@@ -9,6 +9,7 @@ import { ModernAppShell } from '@/components/ModernAppShell';
 import { Sparkles, MessageSquare, Mail, Terminal, Disc, ShoppingBag, ExternalLink, ShieldCheck, Zap, CreditCard } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { resolveStorefrontUrl } from '@/lib/storefrontConfig';
+import { TDLogo } from '@/components/TDLogo';
 
 function ShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -66,12 +67,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
             {/* Brand column */}
             <div className="md:col-span-2 space-y-4">
               <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center text-xs shadow-xs">
-                  TD
-                </div>
-                <span className="font-bold text-base tracking-tight text-foreground">
-                  TD Retail Platform
-                </span>
+                <TDLogo size="sm" showWordmark />
                 <Badge variant="outline" className="text-[10px] px-2 py-0.5">
                   Autonomous Engine
                 </Badge>
@@ -95,6 +91,13 @@ function ShellContent({ children }: { children: React.ReactNode }) {
                 Platform
               </h4>
               <ul className="space-y-2 text-xs text-muted-foreground">
+                <li>
+                  <NextLink href="/beta-guide" className="hover:text-foreground transition-colors flex items-center gap-1.5 font-medium text-foreground">
+                    <Sparkles className="h-3 w-3 text-primary" />
+                    <span>Beta Architecture Guide</span>
+                    <Badge variant="secondary" className="text-[9px] py-0 px-1 font-bold">New</Badge>
+                  </NextLink>
+                </li>
                 <li>
                   <NextLink href="/chat/new?merchantId=merchant_music" className="hover:text-foreground transition-colors flex items-center gap-1.5">
                     <Sparkles className="h-3 w-3 text-primary" />
