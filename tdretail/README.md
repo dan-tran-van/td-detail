@@ -152,10 +152,15 @@ Follow these steps to experience all capabilities:
 3. This proves that merchant boundary isolation is strictly enforced server-side.
 
 ### Step 4: Test SendGrid Inbound Parse Email Routing (`/outbox`)
-1. Visit [http://localhost:3000/outbox](http://localhost:3000/outbox).
-2. Select any outgoing email notification.
-3. Click **"Simulate Customer Reply"**, enter a reply message (e.g., *"Thanks, the FLAC stems extracted perfectly!"*), and click **"Send Inbound Webhook"**.
-4. Click **"Go to thread"** to see that the email was ingested into the conversation thread without logging in, and the Gemini agent has already responded!
+1. **Live Email Verification (CLI)**:
+   ```bash
+   node scripts/test-sendgrid.mjs your-email@gmail.com
+   ```
+   Verifies that the SendGrid API key and authenticated domain (`support@yourdomain.com`) successfully dispatch emails with HTTP 202.
+2. **Outbox Web Simulator**: Visit [http://localhost:3000/outbox](http://localhost:3000/outbox).
+3. Select any outgoing email notification.
+4. Click **"Simulate Customer Reply"**, enter a reply message (e.g., *"Thanks, the FLAC stems extracted perfectly!"*), and click **"Send Inbound Webhook"**.
+5. Click **"Go to thread"** to see that the email was ingested into the conversation thread without logging in, and the Gemini agent has already responded!
 
 ### Step 5: Test Human Escalation & Specialist Resolution
 1. In any active chat, click **"Request Human"** or type: *"I would like to speak to a human supervisor."*
@@ -167,19 +172,13 @@ Follow these steps to experience all capabilities:
 ## 🚢 Production Deployment
 
 ### Option A: Google Cloud Run (Recommended for Gemini workloads)
-1. Build the Docker image:
-   ```bash
-   gcloud builds submit --tag gcr.io/PROJECT_ID/tdretail
-   ```
-2. Deploy to Cloud Run:
-   ```bash
-   gcloud run deploy tdretail \
-     --image gcr.io/PROJECT_ID/tdretail \
-     --platform managed \
-     --region us-central1 \
-     --allow-unauthenticated \
-     --set-env-vars GEMINI_API_KEY="YOUR_KEY",SENDGRID_API_KEY="YOUR_KEY",FIREBASE_PROJECT_ID="PROJECT_ID"
-   ```
+Deploy from source directly with configured environment variables:
+```bash
+gcloud run deploy tdretail \
+  --source . \
+  --region asia-southeast1 \
+  --set-env-vars GEMINI_API_KEY="YOUR_KEY",FIREBASE_PROJECT_ID="YOUR_PROJECT_ID",SENDGRID_API_KEY="YOUR_SENDGRID_KEY",SENDGRID_FROM_EMAIL="support@yourdomain.com",INBOUND_EMAIL_DOMAIN="inbound.yourdomain.com"
+```
 
 ### Option B: Firebase App Hosting
 1. Connect repository in Firebase Console under **App Hosting**.

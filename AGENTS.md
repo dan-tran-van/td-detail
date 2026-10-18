@@ -51,6 +51,10 @@ All integration between storefronts and `tdretail` is purely HTTP REST with CORS
    - Validates ownership against `conversation.customerId` and `conversation.customerEmail` to ensure visitor messages are never rejected with 403 Access Denied.
 5. **Outbox Notification (`POST /api/outbox`)**:
    - Outbound support emails are routed directly to the visitor's email (`guest_xxxx@soundwave.store`), not the fallback persona session.
+   - When SendGrid is configured (`SENDGRID_API_KEY`), emails are delivered via custom domain (`SENDGRID_FROM_EMAIL=support@yourdomain.com`) with reply-to routing (`reply+{conversationId}@inbound.yourdomain.com`).
+6. **SendGrid Inbound Parse Webhook (`POST /api/webhooks/sendgrid`)**:
+   - Ingests inbound email replies received by SendGrid Inbound Parse (`inbound.yourdomain.com`).
+   - Appends the message to the active conversation, triggers the Gemini Agent, and sends the AI response back to the customer via email.
 
 ---
 
@@ -93,4 +97,7 @@ cd technology-merchant && pnpm dev -p 3002 # port 3002
 cd tdretail && pnpm exec tsc --noEmit && pnpm run build
 cd music-merchant && pnpm exec tsc --noEmit && pnpm run build
 cd technology-merchant && pnpm exec tsc --noEmit && pnpm test && pnpm run build
+
+# SendGrid verification test
+cd tdretail && node scripts/test-sendgrid.mjs your-email@example.com
 ```

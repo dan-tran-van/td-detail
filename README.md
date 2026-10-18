@@ -82,7 +82,7 @@ GEMINI_API_KEY=your_gemini_api_key_here
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 # Optional: SendGrid & Firebase Admin
 SENDGRID_API_KEY=
-FIREBASE_PROJECT_ID=tdretail-demo-project
+FIREBASE_PROJECT_ID=your_firebase_project_id
 ```
 
 **`music-merchant/.env.local`**:
@@ -135,7 +135,12 @@ Visit:
 - Live human escalation: Triggered automatically when issues exceed automated thresholds or when requested by the customer.
 
 ### 3. Dynamic Cloud Run Configuration
-- `music-merchant` dynamically discovers `tdretail` at runtime via `RootLayout` script injection and `getTDRetailPortalUrl()`, automatically switching between local `http://localhost:3000` and the live Cloud Run backend without hardcoded bundle URLs.
+- `music-merchant` and `technology-merchant` dynamically discover `tdretail` at runtime via `RootLayout` script injection and `lib/config.ts`, automatically switching between local `http://localhost:3000` and the live Cloud Run backend without hardcoded bundle URLs.
+
+### 4. SendGrid Production Email & Inbound Parse
+- Dispatches transactional AI resolution emails using custom authenticated domain (`support@yourdomain.com`).
+- Direct reply routing (`reply+{conversationId}@inbound.yourdomain.com`) enables shoppers to reply directly from their personal email client.
+- Inbound Parse webhook (`POST /api/webhooks/sendgrid`) ingests replies, appends them to the conversation thread, and triggers automated Gemini responses.
 
 ---
 
@@ -147,7 +152,7 @@ cd tdretail
 gcloud run deploy tdretail \
   --source . \
   --region asia-southeast1 \
-  --set-env-vars GEMINI_API_KEY="your_gemini_api_key"
+  --set-env-vars GEMINI_API_KEY="your_gemini_api_key",FIREBASE_PROJECT_ID="your_project_id",SENDGRID_API_KEY="your_sendgrid_key",SENDGRID_FROM_EMAIL="support@yourdomain.com",INBOUND_EMAIL_DOMAIN="inbound.yourdomain.com"
 ```
 
 ### Deploy `music-merchant`
