@@ -17,6 +17,7 @@ import {
   X,
   ArrowRight,
   Zap,
+  Code2,
 } from 'lucide-react';
 import { resolveStorefrontUrl } from '@/lib/storefrontConfig';
 import { Button } from '@/components/ui/button';
@@ -176,6 +177,21 @@ export function Navbar() {
                   <span>Outbox</span>
                 </NavigationMenuLink>
               </NavigationMenuItem>
+
+              {/* API Documentation Link */}
+              <NavigationMenuItem>
+                <NavigationMenuLink
+                  render={<NextLink href="/docs" />}
+                  className={`h-8 px-3 rounded-full text-xs font-medium cursor-pointer transition-colors ${
+                    pathname?.startsWith('/docs')
+                      ? 'bg-muted text-foreground font-semibold'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                  }`}
+                >
+                  <Code2 className="h-3.5 w-3.5 mr-1 inline" />
+                  <span>API Docs</span>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
         </div>
@@ -266,6 +282,15 @@ export function Navbar() {
                     >
                       <Mail className="h-4 w-4 text-primary" />
                       <span>Email Outbox & Webhooks</span>
+                    </NextLink>
+
+                    <NextLink
+                      href="/docs"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-muted transition-colors text-xs font-medium text-foreground"
+                    >
+                      <Code2 className="h-4 w-4 text-primary" />
+                      <span>API Reference & Docs</span>
                     </NextLink>
                   </div>
 

@@ -214,6 +214,13 @@ export default function LandingPage() {
                 </Button>
               </NextLink>
 
+              <NextLink href="/docs">
+                <Button variant="outline" size="lg" className="h-12 px-6 rounded-full gap-2 border-border backdrop-blur bg-background/60 hover:bg-muted/80 font-medium text-foreground">
+                  <Code2 className="h-4 w-4 text-primary" />
+                  <span>API Documentation</span>
+                </Button>
+              </NextLink>
+
               <Button
                 variant="ghost"
                 size="lg"
@@ -703,12 +710,19 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="pt-2 flex items-center gap-3">
+                <div className="pt-2 flex flex-wrap items-center gap-3">
+                  <NextLink href="/docs">
+                    <Button size="sm" className="rounded-full gap-2 text-xs bg-primary text-primary-foreground px-4 shadow-sm font-semibold hover:opacity-90 transition-all hover:scale-102">
+                      <Code2 className="h-3.5 w-3.5" />
+                      <span>Explore Interactive API Reference</span>
+                      <ArrowRight className="h-3 w-3" />
+                    </Button>
+                  </NextLink>
+
                   <NextLink href="/outbox">
                     <Button variant="outline" size="sm" className="rounded-full gap-2 text-xs border-border px-4 bg-background">
                       <Terminal className="h-3.5 w-3.5" />
-                      <span>Inspect System Outbox & Webhooks</span>
-                      <ArrowRight className="h-3 w-3" />
+                      <span>Inspect Outbox & Webhooks</span>
                     </Button>
                   </NextLink>
                 </div>
@@ -723,84 +737,146 @@ export default function LandingPage() {
                         <span className="w-3 h-3 rounded-full bg-red-500/80 inline-block" />
                         <span className="w-3 h-3 rounded-full bg-yellow-500/80 inline-block" />
                         <span className="w-3 h-3 rounded-full bg-green-500/80 inline-block" />
-                        <span className="ml-2 text-xs font-mono text-zinc-400">tdretail-sdk.ts</span>
+                        <span className="ml-2 text-xs font-mono text-zinc-400">tdretail-rest-api.ts</span>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 overflow-x-auto">
                         <TabsList className="bg-zinc-950/80 p-1 rounded-xl border border-zinc-800 text-zinc-400">
                           <TabsTrigger
                             value="orders"
-                            className="text-xs font-mono py-1 px-3 rounded-lg text-zinc-400 hover:text-zinc-200 data-active:bg-zinc-800 data-active:text-white data-active:shadow-xs transition-colors"
+                            className="text-[11px] font-mono py-1 px-2.5 rounded-lg text-zinc-400 hover:text-zinc-200 data-active:bg-zinc-800 data-active:text-white transition-colors"
                           >
                             POST /orders
                           </TabsTrigger>
                           <TabsTrigger
-                            value="webhooks"
-                            className="text-xs font-mono py-1 px-3 rounded-lg text-zinc-400 hover:text-zinc-200 data-active:bg-zinc-800 data-active:text-white data-active:shadow-xs transition-colors"
+                            value="patch"
+                            className="text-[11px] font-mono py-1 px-2.5 rounded-lg text-zinc-400 hover:text-zinc-200 data-active:bg-zinc-800 data-active:text-white transition-colors"
                           >
-                            Inbound Webhook
+                            PATCH /orders/:id
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="merchants"
+                            className="text-[11px] font-mono py-1 px-2.5 rounded-lg text-zinc-400 hover:text-zinc-200 data-active:bg-zinc-800 data-active:text-white transition-colors"
+                          >
+                            POST /merchants
                           </TabsTrigger>
                           <TabsTrigger
                             value="conversations"
-                            className="text-xs font-mono py-1 px-3 rounded-lg text-zinc-400 hover:text-zinc-200 data-active:bg-zinc-800 data-active:text-white data-active:shadow-xs transition-colors"
+                            className="text-[11px] font-mono py-1 px-2.5 rounded-lg text-zinc-400 hover:text-zinc-200 data-active:bg-zinc-800 data-active:text-white transition-colors"
                           >
-                            AI Resolution
+                            POST /conversations
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="webhooks"
+                            className="text-[11px] font-mono py-1 px-2.5 rounded-lg text-zinc-400 hover:text-zinc-200 data-active:bg-zinc-800 data-active:text-white transition-colors"
+                          >
+                            Inbound Webhook
                           </TabsTrigger>
                         </TabsList>
                       </div>
                     </div>
 
                     <CardContent className="p-6 font-mono text-xs leading-relaxed overflow-x-auto text-zinc-300">
+                      {/* Tab 1: POST /orders */}
                       <TabsContent value="orders" className="mt-0">
                         <pre className="space-y-1">
-                          <span className="text-zinc-500">// 1. Sync external order from standalone merchant to TD Retail</span>
+                          <span className="text-zinc-500">// 1. Synchronize order from SoundWave or Volt Nest storefront</span>
                           {'\n'}
-                          <span className="text-purple-400">const</span> response = <span className="text-purple-400">await</span> <span className="text-blue-400">fetch</span>(<span className="text-emerald-300">&apos;https://api.tdretail.com/v1/orders&apos;</span>, {'{\n'}
+                          <span className="text-purple-400">const</span> response = <span className="text-purple-400">await</span> <span className="text-blue-400">fetch</span>(<span className="text-emerald-300">&apos;/api/orders&apos;</span>, {'{\n'}
                           {'  '}method: <span className="text-emerald-300">&apos;POST&apos;</span>,{'\n'}
-                          {'  '}headers: {'{ '}<span className="text-emerald-300">&apos;Authorization&apos;</span>: <span className="text-emerald-300">&apos;Bearer td_sec_live_9921&apos;</span>{' },\n'}
+                          {'  '}headers: {'{ '}<span className="text-emerald-300">&apos;Content-Type&apos;</span>: <span className="text-emerald-300">&apos;application/json&apos;</span>{' },\n'}
                           {'  '}body: <span className="text-blue-400">JSON.stringify</span>({'{ \n'}
-                          {'    '}merchantId: <span className="text-emerald-300">&apos;merchant_soundwave_01&apos;</span>,{'\n'}
-                          {'    '}orderId: <span className="text-emerald-300">&apos;ORD-SW-9021&apos;</span>,{'\n'}
-                          {'    '}items: [<span className="text-emerald-300">&apos;Lossless Studio Master (WAV)&apos;</span>],{'\n'}
-                          {'    '}licenseKey: <span className="text-emerald-300">&apos;SW-LIC-9921-X&apos;</span>,{'\n'}
-                          {'    '}fulfillmentStatus: <span className="text-emerald-300">&apos;completed&apos;</span>{'\n'}
+                          {'    '}orderId: <span className="text-emerald-300">&apos;ORD-VOLT-9021&apos;</span>,{'\n'}
+                          {'    '}merchantId: <span className="text-emerald-300">&apos;merchant_b&apos;</span>,{'\n'}
+                          {'    '}customerEmail: <span className="text-emerald-300">&apos;alex.chen@example.com&apos;</span>,{'\n'}
+                          {'    '}items: [{'{ name: '}<span className="text-emerald-300">&apos;VoltCore Pro 100W GaN&apos;</span>{', price: 89.99, quantity: 1 }'}],{'\n'}
+                          {'    '}orderStatus: <span className="text-emerald-300">&apos;processing&apos;</span>{'\n'}
                           {'  }'}),{'\n'}
                           {'}'});
                         </pre>
                       </TabsContent>
 
+                      {/* Tab 2: PATCH /orders/:id */}
+                      <TabsContent value="patch" className="mt-0">
+                        <pre className="space-y-1">
+                          <span className="text-zinc-500">// 2. Update fulfillment status & courier tracking notes</span>
+                          {'\n'}
+                          <span className="text-purple-400">const</span> response = <span className="text-purple-400">await</span> <span className="text-blue-400">fetch</span>(<span className="text-emerald-300">&apos;/api/orders/ORD-VOLT-9021&apos;</span>, {'{\n'}
+                          {'  '}method: <span className="text-emerald-300">&apos;PATCH&apos;</span>,{'\n'}
+                          {'  '}headers: {'{\n'}
+                          {'    '}<span className="text-emerald-300">&apos;Content-Type&apos;</span>: <span className="text-emerald-300">&apos;application/json&apos;</span>,{'\n'}
+                          {'    '}<span className="text-emerald-300">&apos;x-merchant-id&apos;</span>: <span className="text-emerald-300">&apos;merchant_b&apos;</span> <span className="text-zinc-500">// Tenant security boundary check</span>{'\n'}
+                          {'  }'},{'\n'}
+                          {'  '}body: <span className="text-blue-400">JSON.stringify</span>({'{ \n'}
+                          {'    '}orderStatus: <span className="text-emerald-300">&apos;out_for_delivery&apos;</span>,{'\n'}
+                          {'    '}trackingNumber: <span className="text-emerald-300">&apos;TRK-VOLT-88192&apos;</span>,{'\n'}
+                          {'    '}courierNotes: <span className="text-emerald-300">&apos;Driver assigned to express morning route.&apos;</span>{'\n'}
+                          {'  }'}),{'\n'}
+                          {'}'});
+                        </pre>
+                      </TabsContent>
+
+                      {/* Tab 3: POST /merchants */}
+                      <TabsContent value="merchants" className="mt-0">
+                        <pre className="space-y-1">
+                          <span className="text-zinc-500">// 3. Onboard merchant with ground-truth AI support policy</span>
+                          {'\n'}
+                          <span className="text-purple-400">await</span> <span className="text-blue-400">fetch</span>(<span className="text-emerald-300">&apos;/api/merchants&apos;</span>, {'{\n'}
+                          {'  '}method: <span className="text-emerald-300">&apos;POST&apos;</span>,{'\n'}
+                          {'  '}headers: {'{ '}<span className="text-emerald-300">&apos;Content-Type&apos;</span>: <span className="text-emerald-300">&apos;application/json&apos;</span>{' },\n'}
+                          {'  '}body: <span className="text-blue-400">JSON.stringify</span>({'{ \n'}
+                          {'    '}id: <span className="text-emerald-300">&apos;merchant_b&apos;</span>,{'\n'}
+                          {'    '}name: <span className="text-emerald-300">&apos;Volt Nest&apos;</span>,{'\n'}
+                          {'    '}category: <span className="text-emerald-300">&apos;tech_accessories&apos;</span>,{'\n'}
+                          {'    '}supportPolicy: {'{ \n'}
+                          {'      '}returns: <span className="text-emerald-300">&apos;10-day replacement on hardware defects.&apos;</span>,{'\n'}
+                          {'      '}refunds: <span className="text-emerald-300">&apos;Covered under 1-Year Manufacturer Warranty.&apos;</span>,{'\n'}
+                          {'      '}escalationThreshold: <span className="text-emerald-300">&apos;Tickets over $50 escalate to Senior Tech Support.&apos;</span>{'\n'}
+                          {'    }'}{'\n'}
+                          {'  }'}),{'\n'}
+                          {'}'});
+                        </pre>
+                      </TabsContent>
+
+                      {/* Tab 4: POST /conversations */}
+                      <TabsContent value="conversations" className="mt-0">
+                        <pre className="space-y-1">
+                          <span className="text-zinc-500">// 4. Create support thread & trigger Gemini 3.5 Flash Lite agent</span>
+                          {'\n'}
+                          <span className="text-purple-400">const</span> session = <span className="text-purple-400">await</span> <span className="text-blue-400">fetch</span>(<span className="text-emerald-300">&apos;/api/conversations&apos;</span>, {'{\n'}
+                          {'  '}method: <span className="text-emerald-300">&apos;POST&apos;</span>,{'\n'}
+                          {'  '}body: <span className="text-blue-400">JSON.stringify</span>({'{ \n'}
+                          {'    '}merchantId: <span className="text-emerald-300">&apos;merchant_music&apos;</span>,{'\n'}
+                          {'    '}orderId: <span className="text-emerald-300">&apos;ORD-MUS-8821&apos;</span> <span className="text-zinc-500">// Grounds AI on verified order</span>,{'\n'}
+                          {'    '}subject: <span className="text-emerald-300">&apos;Download link inquiry&apos;</span>,{'\n'}
+                          {'    '}initialMessage: <span className="text-emerald-300">&apos;Where can I access my lossless master stems?&apos;</span>{'\n'}
+                          {'  }'}),{'\n'}
+                          {'}'});
+                        </pre>
+                      </TabsContent>
+
+                      {/* Tab 5: Inbound Webhook */}
                       <TabsContent value="webhooks" className="mt-0">
                         <pre className="space-y-1">
-                          <span className="text-zinc-500">// 2. Inbound SendGrid webhook routing with token authentication</span>
+                          <span className="text-zinc-500">// 5. SendGrid Inbound Parse Webhook (POST /api/webhooks/sendgrid)</span>
                           {'\n'}
                           <span className="text-purple-400">export async function</span> <span className="text-blue-400">POST</span>(request: Request) {'{\n'}
-                          {'  '}<span className="text-purple-400">const</span> formData = <span className="text-purple-400">await</span> request.<span className="text-blue-400">formData</span>();{'\n'}
-                          {'  '}<span className="text-purple-400">const</span> replyToken = <span className="text-blue-400">extractToken</span>(formData.<span className="text-blue-400">get</span>(<span className="text-emerald-300">&apos;to&apos;</span>));{'\n'}
-                          {'  '}<span className="text-purple-400">const</span> resolution = <span className="text-purple-400">await</span> tdEngine.<span className="text-blue-400">processCustomerResponse</span>({'{ \n'}
-                          {'    '}threadToken: replyToken,{'\n'}
-                          {'    '}body: formData.<span className="text-blue-400">get</span>(<span className="text-emerald-300">&apos;text&apos;</span>),{'\n'}
-                          {'    '}groundedVerification: <span className="text-sky-300">true</span>{'\n'}
-                          {'  }'});{'\n'}
-                          {'  '}<span className="text-purple-400">return</span> Response.<span className="text-blue-400">json</span>({'{ success: true }'});{'\n'}
+                          {'  '}<span className="text-purple-400">const</span> {'{ from, to, subject, text }'} = <span className="text-purple-400">await</span> request.<span className="text-blue-400">json</span>();{'\n'}
+                          {'  '}<span className="text-zinc-500">// Extracts thread ID from reply token in recipient address</span>{'\n'}
+                          {'  '}<span className="text-purple-400">const</span> result = <span className="text-purple-400">await</span> EmailService.<span className="text-blue-400">handleInboundEmail</span>({'{ from, to, subject, text }'});{'\n'}
+                          {'  '}<span className="text-purple-400">return</span> Response.<span className="text-blue-400">json</span>({'{ success: true, aiReply: result.aiReply }'});{'\n'}
                           {'}'}
                         </pre>
                       </TabsContent>
-
-                      <TabsContent value="conversations" className="mt-0">
-                        <pre className="space-y-1">
-                          <span className="text-zinc-500">// 3. Initiate autonomous customer resolution session</span>
-                          {'\n'}
-                          <span className="text-purple-400">const</span> session = <span className="text-purple-400">await</span> <span className="text-blue-400">fetch</span>(<span className="text-emerald-300">&apos;https://api.tdretail.com/v1/conversations&apos;</span>, {'{\n'}
-                          {'  '}method: <span className="text-emerald-300">&apos;POST&apos;</span>,{'\n'}
-                          {'  '}body: <span className="text-blue-400">JSON.stringify</span>({'{ \n'}
-                          {'    '}merchantId: <span className="text-emerald-300">&apos;merchant_soundwave_01&apos;</span>,{'\n'}
-                          {'    '}customerId: <span className="text-emerald-300">&apos;cust_sarah_01&apos;</span>,{'\n'}
-                          {'    '}intent: <span className="text-emerald-300">&apos;fulfillment_license_inquiry&apos;</span>{'\n'}
-                          {'  }'}),{'\n'}
-                          {'}'});
-                        </pre>
-                      </TabsContent>
                     </CardContent>
+
+                    <CardFooter className="px-6 py-3 bg-zinc-900/60 border-t border-zinc-800 flex items-center justify-between text-xs font-sans">
+                      <span className="text-zinc-400">Complete documentation with live interactive testing</span>
+                      <NextLink href="/docs" className="text-primary hover:underline font-semibold flex items-center gap-1">
+                        <span>Open API Docs Sandbox</span>
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </NextLink>
+                    </CardFooter>
                   </Card>
                 </Tabs>
               </div>
