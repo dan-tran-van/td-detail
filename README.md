@@ -147,6 +147,90 @@ Visit:
 - Strict multi-merchant boundary protection: merchants can only modify orders assigned to their verified `merchantId`.
 - Gemini AI reflects status transitions and digital license keys in real time when customers inquire.
 
+### 6. Dedicated Merchant Portal (`/merchant/*`)
+- **Operational Dashboard (`/merchant`)**: Real-time KPI metric cards (Pending Escalations, Orders to Fulfill, Dispatched AI Emails), active Gemini policy summaries, and quick links.
+- **Human Escalation Center (`/merchant/escalations`)**: Review tickets escalated by Gemini AI, inspect multi-part reasoning/tool calls, reply directly as `human_agent`, dispatch email notifications, and resolve tickets.
+- **Manual Order Fulfillment (`/merchant/orders`)**: Search and filter merchant orders, trigger status transitions, assign courier tracking numbers, and provision digital download keys.
+- **Gemini Outbox Inspection (`/merchant/outbox`)**: Audit outbound customer emails with SendGrid simulation and preview dialogs.
+- **Store Details & Ground-Truth AI Policies (`/merchant/settings`)**: Customize brand identity, colors, support email, storefront URL, and ground-truth Gemini support policies (returns, refunds, delivery, escalation threshold, operating mode, and suggested demo prompts).
+- **Merchant Registration (`/merchant/register`)**: 3-step dynamic onboarding wizard for registering new participating storefronts.
+
+### 7. Dual-Mode Authentication & Demo Merchant Protection
+- **HTTP-Only Cookie Session (`td_merchant_session`)**: Enables instant SSR rendering with zero client-side auth hydration flicker or bundle bloat.
+- **1-Click Quick Demo Evaluation**: Direct 1-click evaluation switcher between SoundWave Digital (`merchant_music`) and Volt Nest (`merchant_b`).
+- **Protected Seed Merchants**: Default seeded merchants (`SoundWave Digital`, `Volt Nest`, `FreshCart Direct`) are protected with `403 Forbidden` (`isDemoProtected: true`) to preserve a consistent evaluation experience. Custom registered merchants remain 100% editable.
+
+---
+
+## 🧑‍💻 Developer Guide: Continuing Development
+
+This section provides essential context for future developers and maintainers extending the TD Retail platform.
+
+### A. Authentication & Session Architecture
+The platform intentionally separates customer and merchant sessions:
+1. **Shopper Persona Sessions (`td_customer_id` cookie)**:
+   - Identifies the current consumer viewing `/inbox` or chatting via `/chat/[id]`.
+   - Seeded demo personas: `cust_sarah_connor` and `cust_alex_chen`.
+   - Managed via `/api/session` and the floating persona modal dialog.
+2. **Merchant Portal Sessions (`td_merchant_session` HTTP-only cookie)**:
+   - Scoped strictly to merchant staff under `/merchant/*`.
+   - Implemented in `tdretail/lib/merchantSession.ts`.
+   - Passwords are salt-hashed using Node's native `crypto.pbkdf2Sync`.
+   - Includes user ID, merchant ID, role (`owner` | `staff`), and expiration.
+3. **Why Cookie Sessions Instead of Client Firebase Auth?**
+   - **Zero Client Bundle Bloat**: Avoids pulling the heavy `@firebase/auth` client bundle into the browser.
+   - **SSR Native**: Next.js App Router reads `cookies()` synchronously during the initial server render, eliminating layout shifts and auth loading flashes.
+   - **Zero Cloud Run Domain Whitelist Issues**: Works immediately on `localhost`, Cloud Run revision URLs (`asia-southeast1.run.app`), and custom staging environments without Firebase Console whitelist updates.
+   - **Instant 1-Click Evaluation**: Judges and testers can switch between SoundWave Digital and Volt Nest with one click.
+
+### B. Demo Merchant Protection & Testing Settings
+To ensure live demos and automated tests remain predictable, seeded demo merchants are read-only:
+- **Protected Merchant IDs**: `merchant_music`, `merchant_a`, `merchant_b`, `merchant_tech`, `merchant_grocery` (defined in `tdretail/lib/storefrontConfig.ts`).
+- **Protection Behavior**: `PATCH /api/merchant/settings` returns `403 Forbidden` with `{ error: "Demo merchant profiles are protected from editing in this shared evaluation environment.", isDemoProtected: true }`.
+- **How to Test Settings Mutations**:
+  1. Open `/merchant/register` or send a `POST /api/merchants` payload.
+  2. Complete registration to create a custom merchant (e.g. `merchant_my_shop`).
+  3. Log in with the registered credentials.
+  4. Navigate to `/merchant/settings` — all fields (brand colors, name, return policies, warranty rules, operating hours) are fully editable (`200 OK`).
+
+### C. Adding a New Participating Storefront
+To connect a 4th storefront to the platform:
+1. **Register the Merchant**: Call `POST /api/merchants` with store branding, categories, and support policies.
+2. **Configure Storefront SDK**: In the new storefront app, configure `lib/config.ts` targeting `NEXT_PUBLIC_TD_RETAIL_API_URL` and `NEXT_PUBLIC_MERCHANT_ID`.
+3. **Order Sync**: On checkout completion, send `POST /api/orders` to synchronize the order into TD Retail.
+4. **Support Drawer**: Embed the customer support drawer sending `POST /api/conversations` and `POST /api/conversations/[id]/messages`.
+5. **URL Resolution**: Add the merchant ID mapping to `tdretail/lib/storefrontConfig.ts` in `resolveMerchantStorefrontUrl()`.
+
+### D. Extending the Gemini AI Agent
+The agent implementation lives in `tdretail/lib/services/geminiService.ts`:
+- **Model**: Uses `@google/genai` with `gemini-3.5-flash-lite`.
+- **Declaring Tools**: Add tool declarations to `orderLookupTool` in `geminiService.ts`.
+- **Executing Tools**: Handle the tool call in the `fc.name` switch block. **Crucial rule**: Always preserve the function call `id` (`fc.id`) on the `functionResponse` part to maintain turn structure.
+- **Turn Structure Rule**: Never allow consecutive `user` turns (`user -> user`) in the history array passed to Gemini, as the API will reject them with HTTP 400.
+- **Grounded Fallback Engine**: If `GEMINI_API_KEY` is not provided or hits rate limits (HTTP 429), `executeGroundedFallbackEngine()` kicks in automatically to verify orders against the database and respond deterministically.
+
+### E. Storage Persistence & Cache Invalidation
+Storage is managed by `tdretail/lib/firebase/store.ts`:
+- If `FIREBASE_PROJECT_ID` is present, it connects to Google Cloud Firestore via Firebase Admin SDK.
+- Otherwise, it falls back to local file-based storage at `tdretail/.data/db.json`.
+- **Multi-Process Cache Invalidation**: The in-memory cache monitors `fs.statSync(DATA_FILE).mtimeMs`. When one Next.js worker or API route writes to disk, other worker threads automatically invalidate their in-memory cache and re-read the latest state.
+- **Reseeding**: To reset back to pristine demo data, trigger `POST /api/seed` or click "Reset All Mock Data" in the customer persona modal.
+
+---
+
+## 🔧 Environment Variables Reference
+
+| Variable | App | Required? | Description | Default / Fallback |
+| :--- | :--- | :--- | :--- | :--- |
+| `GEMINI_API_KEY` | `tdretail` | Recommended | Google Gemini API key from AI Studio | Grounded Fallback Engine |
+| `NEXT_PUBLIC_APP_URL` | `tdretail` | Yes | TD Retail app URL | `http://localhost:3000` |
+| `FIREBASE_PROJECT_ID` | `tdretail` | Optional | Google Cloud project for Firestore | Local `.data/db.json` file |
+| `SENDGRID_API_KEY` | `tdretail` | Optional | SendGrid API key (`SG.xxx`) | Captured in `/outbox` viewer |
+| `SENDGRID_FROM_EMAIL` | `tdretail` | Optional | Sender address for transactional emails | `support@tdretail.example.com` |
+| `INBOUND_EMAIL_DOMAIN`| `tdretail` | Optional | SendGrid Inbound Parse domain | `inbound.yourdomain.com` |
+| `NEXT_PUBLIC_TD_RETAIL_API_URL` | Storefronts | Yes | Endpoint pointing to TD Retail platform | `http://localhost:3000` |
+| `NEXT_PUBLIC_MERCHANT_ID` | Storefronts | Yes | Merchant identifier (`merchant_music` / `merchant_b`) | Injected per storefront |
+
 ---
 
 ## 🚢 Cloud Run Deployment Commands
@@ -200,3 +284,4 @@ pnpm exec tsc --noEmit
 pnpm test
 pnpm run build
 ```
+

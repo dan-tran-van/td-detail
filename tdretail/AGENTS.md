@@ -114,9 +114,46 @@ TD Retail is an AI-powered multi-merchant customer support platform built on Nex
   - `POST /api/conversations`: Ingests customer support inquiries started externally from storefront support drawers. **Strictly validates that `merchantId` is registered**, rejecting unknown merchants.
   - `POST /api/conversations/[id]/messages`: Ingests customer follow-up chat messages and returns grounded Gemini AI responses.
 
+### F. Dedicated Merchant Portal (`/merchant/*`), Auth & Policy Settings
+- **HTTP-Only Cookie Session**:
+  - `td_merchant_session` cookie handled in `lib/merchantSession.ts` (`getMerchantSession()`, `setMerchantSession()`, `clearMerchantSession()`).
+  - Dual-mode authentication: 1-click evaluation switcher for SoundWave Digital & Volt Nest, plus standard email/password form.
+  - Server-side verification via `TDStore.getMerchantUserByEmail()` and Firestore `merchant_users` collection.
+- **Dedicated Portal Routes**:
+  - `/merchant/login`: Merchant staff authentication and 1-click evaluation switcher.
+  - `/merchant`: Live operational overview with KPI metrics, active Gemini AI grounding rules, and quick actions.
+  - `/merchant/escalations`: Human escalation center for Gemini-escalated tickets with reasoning logs, human agent replies, and email dispatch.
+  - `/merchant/orders`: Order status and fulfillment table with manual status update modal (`processing` $\rightarrow$ `out_for_delivery` $\rightarrow$ `delivered`), tracking numbers, courier notes, and digital license keys.
+  - `/merchant/outbox`: Audit view of Gemini AI sent emails with SendGrid simulation and preview dialogs.
+  - `/merchant/settings`: Store identity (name, tagline, description, category, brand/accent colors, support email, storefront URL) and ground-truth Gemini support policies (returns, refunds/warranty, fulfillment, escalation threshold, operating mode, and suggested demo prompts).
+  - `/merchant/register`: 3-step dynamic onboarding wizard for registering new participating storefronts.
+- **Demo Merchant Protection**:
+  - Default seeded merchants (`merchant_music`, `merchant_a`, `merchant_b`, `merchant_tech`, `merchant_grocery`) are protected in `PATCH /api/merchant/settings` with `403 Forbidden` (`isDemoProtected: true`).
+  - Settings UI displays an amber warning banner, locks input controls, and guides evaluators to register a custom merchant to test live edits.
+- **Storefront URL Resolution**:
+  - Centralized in `lib/storefrontConfig.ts` with `resolveMerchantStorefrontUrl(merchant)`: dynamically routes to local ports 3001/3002 during development and production Cloud Run service URLs in deployment.
+
 ---
 
-## 4. Common Workflows & Commands
+## 4. Security & Isolation Invariants (Strict)
+
+1. **Multi-Tenant Order Segregation**:
+   - Orders are strictly bound to their registering `merchantId`.
+   - Customer chat sessions for Merchant A can NEVER access or query orders belonging to Merchant B. The agent tool `lookupOrderStatus` enforces this server-side.
+2. **Merchant Portal Session Boundaries**:
+   - Merchant staff sessions (`td_merchant_session`) are strictly scoped. All `/api/merchant/*` routes require `getMerchantSession()`.
+   - A staff member logged into Merchant A cannot fulfill, modify, or view orders belonging to Merchant B.
+3. **Demo Store Mutation Protection**:
+   - Seeded demo merchants (`merchant_music`, `merchant_a`, `merchant_b`, `merchant_tech`, `merchant_grocery`) are protected in `PATCH /api/merchant/settings` with `403 Forbidden` (`isDemoProtected: true`).
+   - Testing settings mutations MUST be performed against a custom registered merchant (via `/merchant/register` or `POST /api/merchants`).
+4. **Data Concurrency & Cache Invalidation**:
+   - When running against local file storage (`.data/db.json`), `TDStore` uses `fs.statSync(DATA_FILE).mtimeMs` to detect modifications made by parallel Next.js server worker processes. Do not remove or bypass this cache invalidation check.
+5. **Gemini Turn Invariant**:
+   - The history array passed to Gemini must alternate strictly between `user` and `model`. Consecutive `user` turns (`user -> user`) will be rejected by the Gemini API with HTTP 400. Duplicate incoming turns must be pruned before calling `generateContent`.
+
+---
+
+## 5. Common Workflows & Commands
 - **Dev Servers**:
   - `tdretail`: `pnpm dev` (port 3000)
   - `music-merchant`: `pnpm dev -p 3001` (port 3001)
@@ -126,5 +163,6 @@ TD Retail is an AI-powered multi-merchant customer support platform built on Nex
   - `cd music-merchant && pnpm exec tsc --noEmit && pnpm run build`
   - `cd technology-merchant && pnpm exec tsc --noEmit && pnpm test && pnpm run build`
 - **Resetting Demo Data**: Available via the persona modal ("Reset All Mock Data") or `POST /api/seed`.
+
 
 

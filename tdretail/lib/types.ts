@@ -161,3 +161,27 @@ export interface OutboxEmail {
     headers: Record<string, string>;
   };
 }
+
+export interface MerchantUser {
+  id: string;
+  email: string;
+  name: string;
+  merchantId: string;
+  merchantName: string;
+  role: 'owner' | 'staff';
+  passwordHash?: string;
+  createdAt: string;
+}
+
+export interface MerchantSessionData {
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    merchantId: string;
+    merchantName: string;
+    role: 'owner' | 'staff';
+  };
+  merchant: Merchant;
+}
+
