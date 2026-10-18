@@ -63,6 +63,14 @@ export function resolveTDRetailUrl(): string {
     return envUrl.trim().replace(/\/+$/, '');
   }
 
+  // If in browser on localhost or Node.js in development mode, default to local TD Retail platform
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return 'http://localhost:3000';
+  }
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
+    return 'http://localhost:3000';
+  }
+
   return activeConfig.apiUrl.replace(/\/+$/, '');
 }
 

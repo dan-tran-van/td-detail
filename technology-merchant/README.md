@@ -27,15 +27,17 @@ pnpm install
 # 3. Seed product catalogue
 pnpm seed
 
-# 4. Run development server (port 3001 or 3002)
-pnpm dev -p 3001
+# 4. Run development server (port 3002)
+pnpm dev -p 3002
 ```
+
+Visit: **`http://localhost:3002`**
 
 ---
 
 ## 3. Scripts
 
-- `pnpm dev`: Start Next.js development server
+- `pnpm dev -p 3002`: Start Next.js development server on port 3002
 - `pnpm typecheck`: Run TypeScript compilation check (`tsc --noEmit`)
 - `pnpm lint`: Run ESLint check
 - `pnpm test`: Run Vitest unit & integration test suites

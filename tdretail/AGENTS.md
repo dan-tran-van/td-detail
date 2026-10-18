@@ -92,18 +92,18 @@ TD Retail is an AI-powered multi-merchant customer support platform built on Nex
   - Accessible **Dialog Modals** in both `ModernAppShell.tsx` and `app/outbox/page.tsx`.
   - Switching immediately writes `document.cookie`, calls `/api/session`, and performs a clean reload to sync all tickets and orders.
 
-### E. External Merchant Integration (`music-merchant`) & CORS
-- **Independent Merchant A Storefront**: Built as a standalone Next.js app in `/music-merchant` running on port 3001. Demo storefront routes originally in `tdretail` (`/storefront/music`, etc.) have been removed.
+### E. External Merchant Integration & Dynamic Registration (`POST /api/merchants`)
+- **Participating External Storefronts**:
+  - `music-merchant` (port 3001, `merchant_music` - SoundWave Digital)
+  - `technology-merchant` (port 3002, `merchant_b` - Volt Nest)
 - **Cross-Origin Resource Sharing (CORS)**:
   - Enabled across all `/api/:path*` routes in `tdretail/next.config.ts`.
-  - Explicit `OPTIONS` preflight handlers and `Access-Control-Allow-Origin: *` headers are present in `app/api/conversations/route.ts`, `app/api/conversations/[id]/route.ts`, and `app/api/conversations/[id]/messages/route.ts`.
-- **Cross-App Navigation**:
-  - `tdretail` Navbar includes a direct link to the external music storefront (`http://localhost:3001`).
-  - Storefront links directly to active chat threads (`/chat/[conversationId]`) in `tdretail`.
-- **REST Endpoints for External Merchants**:
-  - `POST /api/orders`: Ingests and stores orders placed externally in Firestore/db.json with CORS headers enabled.
-  - `POST /api/conversations`: Ingests customer support inquiries started externally from the storefront support drawer with CORS headers enabled.
-  - `POST /api/conversations/[id]/messages`: Ingests customer follow-up chat messages and returns Gemini AI responses.
+  - Explicit `OPTIONS` preflight handlers and `Access-Control-Allow-Origin: *` headers are present across all external API routes.
+- **REST Endpoints for Participating Merchants**:
+  - `POST /api/merchants`: Dynamically registers new merchants with custom support policies (return windows, warranties, escalation thresholds) and brand styling without modifying seed files.
+  - `POST /api/orders`: Ingests and stores orders placed externally. **Strictly validates that `merchantId` is registered**, rejecting unknown merchants.
+  - `POST /api/conversations`: Ingests customer support inquiries started externally from storefront support drawers. **Strictly validates that `merchantId` is registered**, rejecting unknown merchants.
+  - `POST /api/conversations/[id]/messages`: Ingests customer follow-up chat messages and returns grounded Gemini AI responses.
 
 ---
 
@@ -111,7 +111,11 @@ TD Retail is an AI-powered multi-merchant customer support platform built on Nex
 - **Dev Servers**:
   - `tdretail`: `pnpm dev` (port 3000)
   - `music-merchant`: `pnpm dev -p 3001` (port 3001)
-- **Validation**: `pnpm run build` in each project directory (Ensures zero TypeScript errors, correct Next.js 16 partial prerendering, and clean compilation).
+  - `technology-merchant`: `pnpm dev -p 3002` (port 3002)
+- **Validation**:
+  - `cd tdretail && pnpm exec tsc --noEmit && pnpm run build`
+  - `cd music-merchant && pnpm exec tsc --noEmit && pnpm run build`
+  - `cd technology-merchant && pnpm exec tsc --noEmit && pnpm test && pnpm run build`
 - **Resetting Demo Data**: Available via the persona modal ("Reset All Mock Data") or `POST /api/seed`.
 
 

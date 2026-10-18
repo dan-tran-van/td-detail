@@ -69,9 +69,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Resolve merchant dynamically
-    const merchantId = body.merchantId || 'merchant_music';
+    // Resolve merchant dynamically and enforce registration
+    const merchantId = body.merchantId;
+    if (!merchantId) {
+      return NextResponse.json({ error: 'merchantId is required.' }, { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } });
+    }
+
     const merchant = await TDStore.getMerchantById(merchantId);
+    if (!merchant) {
+      return NextResponse.json({ error: `Merchant "${merchantId}" is not registered on TD Retail.` }, { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } });
+    }
 
     // Dynamic prefix based on merchant category
     let orderPrefix = 'RETL';
