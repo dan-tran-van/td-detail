@@ -72,6 +72,7 @@ import { Customer } from '@/lib/types';
 import DotGrid from '@/components/DotGrid';
 import ShinyText from '@/components/ShinyText';
 import CountUp from '@/components/CountUp';
+import { resolveStorefrontUrl } from '@/lib/storefrontConfig';
 
 export default function LandingPage() {
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -361,7 +362,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Merchant 1: SoundWave Digital Music */}
             <Card className="border-border/80 bg-card shadow-md hover:border-primary/60 transition-all flex flex-col justify-between overflow-hidden relative group rounded-2xl">
               <div className="absolute top-0 right-0 w-36 h-36 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors pointer-events-none" />
@@ -377,12 +378,12 @@ export default function LandingPage() {
                         <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </CardTitle>
                       <CardDescription className="text-xs font-medium">
-                        Lossless Audio & Digital Media Rights Management
+                        Lossless Audio & Digital Rights
                       </CardDescription>
                     </div>
                   </div>
                   <Badge variant="secondary" className="text-[11px] font-semibold">
-                    Digital Delivery
+                    Digital
                   </Badge>
                 </div>
 
@@ -398,7 +399,7 @@ export default function LandingPage() {
                     License Verification
                   </span>
                   <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
-                    Zero-Copy Stem Retrieval
+                    Zero-Copy Stems
                   </span>
                 </div>
               </CardHeader>
@@ -407,25 +408,88 @@ export default function LandingPage() {
                 <NextLink href="/chat/conv_music_01" className="flex-1">
                   <Button className="w-full rounded-full gap-2 bg-primary text-primary-foreground font-medium shadow-sm">
                     <Play className="h-4 w-4" />
-                    <span>Launch Agent Chat</span>
+                    <span>Agent Chat</span>
                   </Button>
                 </NextLink>
 
                 <a
-                  href={process.env.NEXT_PUBLIC_MUSIC_MERCHANT_URL || 'http://localhost:3001'}
+                  href={resolveStorefrontUrl('music')}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1"
                 >
                   <Button variant="outline" className="w-full rounded-full gap-2 border-border font-medium bg-background/50 hover:bg-background">
                     <ExternalLink className="h-4 w-4" />
-                    <span>Live Storefront</span>
+                    <span>Storefront</span>
                   </Button>
                 </a>
               </CardContent>
             </Card>
 
-            {/* Merchant 2: FreshCart Direct */}
+            {/* Merchant 2: Volt Nest (Merchant B) */}
+            <Card className="border-border/80 bg-card shadow-md hover:border-primary/60 transition-all flex flex-col justify-between overflow-hidden relative group rounded-2xl">
+              <div className="absolute top-0 right-0 w-36 h-36 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors pointer-events-none" />
+              <CardHeader className="p-8 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3.5">
+                    <div className="h-12 w-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-md">
+                      <Zap className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl flex items-center gap-2">
+                        Volt Nest
+                        <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </CardTitle>
+                      <CardDescription className="text-xs font-medium">
+                        Smart Tech & Fast Chargers
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="text-[11px] font-semibold">
+                    Hardware
+                  </Badge>
+                </div>
+
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Next-generation electronics customer experience. Autonomous support delivers live warranty verification, expedited RMA returns tracking, and intelligent technical troubleshooting.
+                </p>
+
+                <div className="pt-2 flex flex-wrap gap-2 text-xs">
+                  <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
+                    2-Yr Warranty
+                  </span>
+                  <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
+                    RMA Tracking
+                  </span>
+                  <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
+                    POST /api/merchants
+                  </span>
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-8 pt-0 flex gap-3">
+                <NextLink href="/chat/conv_music_01" className="flex-1">
+                  <Button className="w-full rounded-full gap-2 bg-primary text-primary-foreground font-medium shadow-sm">
+                    <Play className="h-4 w-4" />
+                    <span>Agent Chat</span>
+                  </Button>
+                </NextLink>
+
+                <a
+                  href={resolveStorefrontUrl('technology')}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1"
+                >
+                  <Button variant="outline" className="w-full rounded-full gap-2 border-border font-medium bg-background/50 hover:bg-background">
+                    <ExternalLink className="h-4 w-4" />
+                    <span>Storefront</span>
+                  </Button>
+                </a>
+              </CardContent>
+            </Card>
+
+            {/* Merchant 3: FreshCart Direct */}
             <Card className="border-border/80 bg-card shadow-md hover:border-primary/60 transition-all flex flex-col justify-between overflow-hidden relative group rounded-2xl">
               <div className="absolute top-0 right-0 w-36 h-36 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors pointer-events-none" />
               <CardHeader className="p-8 space-y-4">
@@ -440,12 +504,12 @@ export default function LandingPage() {
                         <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </CardTitle>
                       <CardDescription className="text-xs font-medium">
-                        Perishable Goods & Cold-Chain Logistics
+                        Perishable Goods & Logistics
                       </CardDescription>
                     </div>
                   </div>
                   <Badge variant="secondary" className="text-[11px] font-semibold">
-                    Physical Logistics
+                    Physical
                   </Badge>
                 </div>
 
@@ -455,13 +519,13 @@ export default function LandingPage() {
 
                 <div className="pt-2 flex flex-wrap gap-2 text-xs">
                   <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
-                    Courier Geofencing
+                    Geofencing
                   </span>
                   <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
                     SLA Validation
                   </span>
                   <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
-                    Autonomous Refund Auth
+                    Refund Auth
                   </span>
                 </div>
               </CardHeader>
@@ -470,14 +534,14 @@ export default function LandingPage() {
                 <NextLink href="/chat/conv_grocery_01" className="flex-1">
                   <Button className="w-full rounded-full gap-2 bg-primary text-primary-foreground font-medium shadow-sm">
                     <Play className="h-4 w-4" />
-                    <span>Launch Agent Chat</span>
+                    <span>Agent Chat</span>
                   </Button>
                 </NextLink>
 
                 <NextLink href="/inbox" className="flex-1">
                   <Button variant="outline" className="w-full rounded-full gap-2 border-border font-medium bg-background/50 hover:bg-background">
                     <MessageSquare className="h-4 w-4" />
-                    <span>Operations Inbox</span>
+                    <span>Inbox</span>
                   </Button>
                 </NextLink>
               </CardContent>

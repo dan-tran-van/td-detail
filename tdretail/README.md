@@ -1,14 +1,14 @@
 # TD Retail — Shared Customer Support Platform & Gemini Agent
 
 [![Next.js 16](https://img.shields.io/badge/Next.js-16.4-black)](https://nextjs.org/)
-[![Google Gemini](https://img.shields.io/badge/Google%20Gemini-2.5%20Flash-4285F4)](https://deepmind.google/technologies/gemini/)
+[![Google Gemini](https://img.shields.io/badge/Google%20Gemini-3.5%20Flash%20Lite-4285F4)](https://deepmind.google/technologies/gemini/)
 [![SendGrid](https://img.shields.io/badge/SendGrid-Inbound%20Parse-00B2E3)](https://sendgrid.com/)
 [![Firebase Firestore](https://img.shields.io/badge/Firebase-Admin%20Firestore-FFCA28)](https://firebase.google.com/)
 [![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-Tailwind-000000)](https://ui.shadcn.com/)
 
 An enterprise-grade, customer-centric multi-merchant customer support resolution platform built for the **TD Retail Hackathon**. 
 
-This platform allows shoppers who buy from separate participating merchant storefronts (such as **SoundWave Digital** for digital lossless audio and **FreshCart Direct** for organic groceries) to manage all their support conversations in a single unified inbox, resolved by a **Google Gemini AI Agent** with server-grounded order tools and bidirectional **SendGrid email reply routing**.
+This platform allows shoppers who buy from separate participating merchant storefronts (such as **SoundWave Digital** for digital lossless audio, **Volt Nest** for tech accessories, and **FreshCart Direct** for organic groceries) to manage all their support conversations in a single unified inbox, resolved by a **Google Gemini AI Agent** with server-grounded order tools and bidirectional **SendGrid email reply routing**.
 
 ---
 
@@ -67,7 +67,7 @@ This platform allows shoppers who buy from separate participating merchant store
                        ┌──────────────────────────────────────┴───────────────┐
                        ▼                                                      ▼
         ┌─────────────────────────────┐                        ┌──────────────────────────────┐
-        │   Google Gemini 2.5 Flash   │                        │   SendGrid Inbound/Outbound  │
+        │  Gemini 3.5 Flash Lite      │                        │   SendGrid Inbound/Outbound  │
         ├─────────────────────────────┤                        ├──────────────────────────────┤
         │ • System Prompt Injection   │                        │ • Outbound Support Emails    │
         │ • Tool: lookupOrderStatus   │                        │ • Inbound Parse Webhook      │

@@ -6,8 +6,9 @@ import { usePathname } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ModernAppShell } from '@/components/ModernAppShell';
-import { Sparkles, MessageSquare, Mail, Terminal, Disc, ShoppingBag, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Sparkles, MessageSquare, Mail, Terminal, Disc, ShoppingBag, ExternalLink, ShieldCheck, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { resolveStorefrontUrl } from '@/lib/storefrontConfig';
 
 function ShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -111,13 +112,25 @@ function ShellContent({ children }: { children: React.ReactNode }) {
               <ul className="space-y-2 text-xs text-muted-foreground">
                 <li>
                   <a
-                    href={process.env.NEXT_PUBLIC_MUSIC_MERCHANT_URL || 'http://localhost:3001'}
+                    href={resolveStorefrontUrl('music')}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-foreground transition-colors flex items-center gap-1.5"
                   >
                     <Disc className="h-3 w-3 text-primary" />
                     SoundWave Digital
+                    <ExternalLink className="h-2.5 w-2.5 opacity-70" />
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href={resolveStorefrontUrl('technology')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-foreground transition-colors flex items-center gap-1.5"
+                  >
+                    <Zap className="h-3 w-3 text-primary" />
+                    Volt Nest Storefront
                     <ExternalLink className="h-2.5 w-2.5 opacity-70" />
                   </a>
                 </li>
@@ -130,11 +143,6 @@ function ShellContent({ children }: { children: React.ReactNode }) {
                   <NextLink href="/chat/conv_grocery_01" className="hover:text-foreground transition-colors flex items-center gap-1.5">
                     <ShoppingBag className="h-3 w-3 text-primary" />
                     FreshCart Direct
-                  </NextLink>
-                </li>
-                <li>
-                  <NextLink href="/chat/conv_grocery_01" className="hover:text-foreground transition-colors">
-                    Organic Cold-Chain
                   </NextLink>
                 </li>
               </ul>
@@ -150,7 +158,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
                   <ShieldCheck className="h-3 w-3 text-emerald-500" />
                   Tenant Data Isolation
                 </li>
-                <li>Google Gemini 2.5 Flash</li>
+                <li>Google Gemini 3.5 Flash Lite</li>
                 <li>SendGrid Inbound Parse</li>
                 <li>Next.js 16 App Router</li>
                 <li>Tailwind CSS & shadcn/ui</li>

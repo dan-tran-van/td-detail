@@ -1,4 +1,5 @@
-import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import type { App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { getAuth, Auth } from 'firebase-admin/auth';
 
@@ -50,7 +51,14 @@ export function initFirebaseAdmin(): {
         isConfigured: true,
       };
     } else if (projectId) {
-      // In Google Cloud Run, Application Default Credentials (ADC) are automatically available via the compute service account.
+      // In Google Cloud Run (detected via K_SERVICE or GCP metadata), Application Default Credentials (ADC)
+      // are automatically available via the compute service account.
+      // In local development without service account key, skip ADC so local requests don't hang waiting for metadata server.
+      const isCloudRun = Boolean(process.env.K_SERVICE || process.env.GOOGLE_CLOUD_PROJECT || process.env.CLOUD_RUN_JOB);
+      if (!isCloudRun && process.env.NODE_ENV !== 'production' && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+        return { app: null, firestore: null, auth: null, isConfigured: false };
+      }
+
       firebaseAppInstance = getApps().length === 0
         ? initializeApp({ projectId })
         : getApps()[0];
