@@ -148,20 +148,43 @@ function ShellContent({ children }: { children: React.ReactNode }) {
               </ul>
             </div>
 
-            {/* Navigation Column 3: Architecture & Security */}
+            {/* Navigation Column 3: Developer Platform & API */}
             <div className="space-y-3">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                Security & Tech
+                Developers
               </h4>
               <ul className="space-y-2 text-xs text-muted-foreground">
-                <li className="flex items-center gap-1.5">
-                  <ShieldCheck className="h-3 w-3 text-emerald-500" />
-                  Tenant Data Isolation
+                <li>
+                  <NextLink href="/docs" className="hover:text-foreground transition-colors flex items-center gap-1.5 font-medium text-foreground">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    API Reference
+                  </NextLink>
                 </li>
-                <li>Google Gemini 3.5 Flash Lite</li>
-                <li>SendGrid Inbound Parse</li>
-                <li>Next.js 16 App Router</li>
-                <li>Tailwind CSS & shadcn/ui</li>
+                <li>
+                  <NextLink href="/docs/merchants" className="hover:text-foreground transition-colors">
+                    Merchants & Policies
+                  </NextLink>
+                </li>
+                <li>
+                  <NextLink href="/docs/orders" className="hover:text-foreground transition-colors">
+                    Orders & Fulfillment
+                  </NextLink>
+                </li>
+                <li>
+                  <NextLink href="/docs/conversations" className="hover:text-foreground transition-colors">
+                    Gemini AI Agent
+                  </NextLink>
+                </li>
+                <li>
+                  <NextLink href="/docs/webhooks" className="hover:text-foreground transition-colors">
+                    Webhooks & SendGrid
+                  </NextLink>
+                </li>
+                <li>
+                  <NextLink href="/docs/sdk" className="hover:text-foreground transition-colors">
+                    Storefront SDK
+                  </NextLink>
+                </li>
               </ul>
             </div>
           </div>
@@ -173,7 +196,9 @@ function ShellContent({ children }: { children: React.ReactNode }) {
               <span>•</span>
               <span className="hover:text-foreground transition-colors cursor-pointer">Terms of Service</span>
               <span>•</span>
-              <span className="hover:text-foreground transition-colors cursor-pointer">API Reference</span>
+              <NextLink href="/docs" className="hover:text-foreground transition-colors text-primary font-medium">
+                API Documentation
+              </NextLink>
             </div>
           </div>
         </div>
