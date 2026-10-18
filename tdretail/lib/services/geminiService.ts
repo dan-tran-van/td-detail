@@ -40,14 +40,21 @@ export class GeminiAgentService {
     // If Gemini API Key is available, use real Gemini SDK with function calling
     if (client) {
       try {
-        return await this.executeGeminiWithTools({
-          client,
-          conversation,
-          merchant,
-          customer,
-          customerMessage,
-          history,
-        });
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Gemini API call timed out after 12s')), 12000)
+        );
+
+        return await Promise.race([
+          this.executeGeminiWithTools({
+            client,
+            conversation,
+            merchant,
+            customer,
+            customerMessage,
+            history,
+          }),
+          timeoutPromise,
+        ]);
       } catch (error) {
         console.error('[GeminiAgent] Error invoking Gemini API, falling back to server-side grounded engine:', error);
       }
@@ -424,7 +431,7 @@ CRITICAL RULES:
           content: errorContent,
           metadata: {
             isAiGrounded: true,
-            modelName: 'gemini-2.5-flash (server-grounded fallback)',
+            modelName: 'gemini-3.5-flash-lite (server-grounded fallback)',
             toolCalls: [toolCall],
           },
           timestamp: new Date().toISOString(),
@@ -466,7 +473,7 @@ CRITICAL RULES:
         content: replyContent,
         metadata: {
           isAiGrounded: true,
-          modelName: 'gemini-2.5-flash (server-grounded fallback)',
+          modelName: 'gemini-3.5-flash-lite (server-grounded fallback)',
           groundedOrderId: o.orderId,
           groundedOrderStatus: o.orderStatus,
           toolCalls: [toolCall],
@@ -494,7 +501,7 @@ CRITICAL RULES:
       content: generalReply,
       metadata: {
         isAiGrounded: false,
-        modelName: 'gemini-2.5-flash (server-grounded fallback)',
+        modelName: 'gemini-3.5-flash-lite (server-grounded fallback)',
       },
       timestamp: new Date().toISOString(),
     };

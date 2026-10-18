@@ -36,6 +36,11 @@ export function initFirebaseAdmin(): {
         })
         : getApps()[0];
       firestoreInstance = getFirestore(firebaseAppInstance);
+      try {
+        firestoreInstance.settings({ ignoreUndefinedProperties: true });
+      } catch (settingsErr) {
+        // settings can only be set once
+      }
       authInstance = getAuth(firebaseAppInstance);
       isConfigured = true;
       return {
@@ -44,11 +49,17 @@ export function initFirebaseAdmin(): {
         auth: authInstance,
         isConfigured: true,
       };
-    } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS && projectId) {
+    } else if (projectId) {
+      // In Google Cloud Run, Application Default Credentials (ADC) are automatically available via the compute service account.
       firebaseAppInstance = getApps().length === 0
         ? initializeApp({ projectId })
         : getApps()[0];
       firestoreInstance = getFirestore(firebaseAppInstance);
+      try {
+        firestoreInstance.settings({ ignoreUndefinedProperties: true });
+      } catch (settingsErr) {
+        // settings can only be set once
+      }
       authInstance = getAuth(firebaseAppInstance);
       isConfigured = true;
       return {
