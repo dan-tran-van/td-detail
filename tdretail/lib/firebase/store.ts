@@ -85,6 +85,12 @@ function loadState(): StorageSchema {
     try {
       const data = fs.readFileSync(DATA_FILE, 'utf-8');
       memoryState = JSON.parse(data) as StorageSchema;
+      // Ensure any newly added seed merchants (e.g. merchant_b) are present
+      for (const m of SEED_MERCHANTS) {
+        if (!memoryState.merchants[m.id]) {
+          memoryState.merchants[m.id] = m;
+        }
+      }
       return memoryState;
     } catch (err) {
       console.warn('[Store] Failed to read db.json, generating default seed state:', err);
@@ -186,6 +192,21 @@ export class TDStore {
     }
     const state = loadState();
     return state.merchants[id] || null;
+  }
+
+  static async upsertMerchant(merchant: Merchant): Promise<Merchant> {
+    const firestore = await this.getFirestoreClient();
+    if (firestore) {
+      try {
+        await firestore.collection('merchants').doc(merchant.id).set(merchant, { merge: true });
+      } catch (e) {
+        console.warn(`[Store] Firestore error saving merchant ${merchant.id}:`, e);
+      }
+    }
+    const state = loadState();
+    state.merchants[merchant.id] = merchant;
+    saveState();
+    return merchant;
   }
 
   // --- Customers ---

@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SoundWave Digital Storefront (Merchant A)
 
-## Getting Started
+Lossless digital audio and multi-track master stems storefront for **SoundWave Digital (`merchant_music`)**. Built with Next.js 16 (App Router), shadcn/ui semantic tokens, React Bits physics and typography animations, integrated directly with the **TD Retail** multi-merchant AI customer support resolution platform.
 
-First, run the development server:
+---
+
+## 1. Quickstart & Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# 1. Install dependencies
+pnpm install
+
+# 2. Run local development server (port 3001)
+pnpm dev -p 3001
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit: **`http://localhost:3001`**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 2. Configuration & TD Retail SDK Integration
 
-## Learn More
+Configuration is managed in `lib/config.ts`:
+- **Local Development**: Automatically discovers and proxies to `http://localhost:3000` when running on `localhost`.
+- **Environment Overrides**:
+  ```ini
+  PORT=3001
+  NEXT_PUBLIC_TD_RETAIL_API_URL=http://localhost:3000
+  NEXT_PUBLIC_MERCHANT_ID=merchant_music
+  ```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 3. Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `pnpm dev -p 3001`: Start Next.js development server on port 3001
+- `pnpm exec tsc --noEmit`: Typecheck codebase
+- `pnpm run build`: Production build with Next.js 16 Partial Prerendering (PPR)
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 4. Key Architectural Features
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **Lossless Catalog & Instant Vault**:
+   - 5 seeded FLAC releases with bit-perfect audio specs, stem packages, and instant cryptographic license generation.
+2. **Zero-Touch Order Sync**:
+   - Every checked-out order syncs via `POST /api/orders` to the central `tdretail` platform in the background.
+3. **Embedded AI Support Drawer**:
+   - Support drawer powered by `tdretail`'s Gemini AI Agent, pre-grounded with order status and digital license key lookups.

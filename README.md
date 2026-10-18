@@ -9,9 +9,10 @@
 
 An enterprise-grade, multi-merchant customer support resolution platform built for the **TD Retail Hackathon**.
 
-The monorepo contains two coordinated applications:
-1. **`tdretail`** (`port 3000`): The centralized multi-merchant customer resolution platform, consolidated inbox, Gemini AI agent with server-grounded tool calling, and SendGrid email routing.
-2. **`music-merchant`** (`port 3001`): A standalone participating digital music storefront (**SoundWave Digital**) demonstrating zero-friction cross-merchant order synchronization, visitor isolation, and embedded AI support drawers.
+The monorepo contains three coordinated applications:
+1. **`tdretail`** (`port 3000`): The centralized multi-merchant customer resolution platform, consolidated inbox, Gemini AI agent with server-grounded tool calling, dynamic merchant registration API (`/api/merchants`), and SendGrid email routing.
+2. **`music-merchant`** (`port 3001`): A standalone participating digital music storefront (**SoundWave Digital - Merchant A**) demonstrating lossless audio catalog, zero-friction cross-merchant order synchronization, visitor isolation, and embedded AI support drawers.
+3. **`technology-merchant`** (`port 3002`): A standalone modern tech accessories storefront (**Volt Nest - Merchant B**) demonstrating GaN chargers, ANC earbuds, 4K portable monitors, warranty protection, Zod-validated secure checkout, and integrated AI customer support.
 
 ---
 
@@ -20,15 +21,21 @@ The monorepo contains two coordinated applications:
 ```
 .
 ├── tdretail/            # Central resolution portal, APIs, and Gemini AI Agent
-│   ├── app/             # Next.js App Router (/inbox, /chat, /outbox, /storefront)
+│   ├── app/             # Next.js App Router (/inbox, /chat, /outbox, /api/merchants)
 │   ├── lib/             # Services (Gemini, Order, Email), Firebase store, types
 │   └── components/      # ModernAppShell, ChatThread, PersonaSelector
 │
-├── music-merchant/      # Independent Digital Audio Storefront (SoundWave Digital)
+├── music-merchant/      # Independent Digital Audio Storefront (SoundWave Digital - Merchant A)
 │   ├── app/             # Storefront catalog, cart, checkout, orders
 │   ├── components/      # Storefront UI, SupportChatWidget drawer
 │   ├── context/         # VisitorContext, OrderContext, CartContext
-│   └── lib/             # api-sync.ts, products catalog
+│   └── lib/             # config.ts, api-sync.ts, products catalog
+│
+├── technology-merchant/ # Independent Tech Accessories Storefront (Volt Nest - Merchant B)
+│   ├── app/             # Storefront catalog, cart, checkout, policy
+│   ├── components/      # Storefront UI, SupportChatWidget drawer
+│   ├── context/         # VisitorContext, OrderContext, CartContext
+│   └── lib/             # config.ts, api-sync.ts, products catalog
 │
 ├── AGENTS.md            # Monorepo architecture & AI coding agent guidelines
 └── README.md            # Monorepo setup, deployment, and live URLs
@@ -38,12 +45,13 @@ The monorepo contains two coordinated applications:
 
 ## 🚀 Live Deployments (Google Cloud Run)
 
-Both services are containerized and deployed to **Google Cloud Run** in `asia-southeast1`:
+Services are containerized and deployed to **Google Cloud Run** in `asia-southeast1`:
 
 | Service | Role | Live URL |
 | :--- | :--- | :--- |
 | **`tdretail`** | Central Platform & Gemini AI Agent | `https://<tdretail-service-url>` |
-| **`music-merchant`** | SoundWave Digital Storefront | `https://<music-merchant-service-url>` |
+| **`music-merchant`** | SoundWave Digital Storefront (Merchant A) | `https://<music-merchant-service-url>` |
+| **`technology-merchant`** | Volt Nest Storefront (Merchant B) | `https://<technology-merchant-service-url>` |
 
 ---
 
@@ -57,12 +65,13 @@ Both services are containerized and deployed to **Google Cloud Run** in `asia-so
 ### 1. Install Dependencies
 ```bash
 # In tdretail
-cd tdretail
-pnpm install
+cd tdretail && pnpm install
 
 # In music-merchant
-cd ../music-merchant
-pnpm install
+cd ../music-merchant && pnpm install
+
+# In technology-merchant
+cd ../technology-merchant && pnpm install
 ```
 
 ### 2. Configure Environment Variables
@@ -83,23 +92,32 @@ NEXT_PUBLIC_TD_RETAIL_API_URL=http://localhost:3000
 NEXT_PUBLIC_MERCHANT_ID=merchant_music
 ```
 
+**`technology-merchant/.env.local`**:
+```ini
+PORT=3002
+NEXT_PUBLIC_TD_RETAIL_API_URL=http://localhost:3000
+NEXT_PUBLIC_MERCHANT_ID=merchant_b
+```
+
 ### 3. Run Dev Servers Concurrently
 
-Open two terminal windows:
+Open three terminal windows:
 
 ```bash
-# Terminal 1: Run TD Retail Central Platform on port 3000
-cd tdretail
-pnpm dev
+# Terminal 1: TD Retail Central Platform (port 3000)
+cd tdretail && pnpm dev
 
-# Terminal 2: Run Music Merchant Storefront on port 3001
-cd music-merchant
-pnpm dev -p 3001
+# Terminal 2: Music Merchant Storefront (port 3001)
+cd music-merchant && pnpm dev -p 3001
+
+# Terminal 3: Tech Accessories Storefront (port 3002)
+cd technology-merchant && pnpm dev -p 3002
 ```
 
 Visit:
-- SoundWave Digital Storefront: **`http://localhost:3001`**
 - TD Retail Central Platform: **`http://localhost:3000`**
+- SoundWave Digital (Merchant A): **`http://localhost:3001`**
+- Volt Nest (Merchant B): **`http://localhost:3002`**
 
 ---
 
@@ -133,11 +151,19 @@ gcloud run deploy tdretail \
 ```
 
 ### Deploy `music-merchant`
-Next.js bakes `NEXT_PUBLIC_*` variables into the client bundle at **build time** and reads them at **runtime**. When deploying via Cloud Run source build, pass both `--update-build-env-vars` and `--update-env-vars`:
-
 ```bash
 cd music-merchant
 gcloud run deploy music-merchant \
+  --source . \
+  --region asia-southeast1 \
+  --update-build-env-vars="NEXT_PUBLIC_TD_RETAIL_API_URL=https://<your-tdretail-service-url>" \
+  --update-env-vars="NEXT_PUBLIC_TD_RETAIL_API_URL=https://<your-tdretail-service-url>"
+```
+
+### Deploy `technology-merchant`
+```bash
+cd technology-merchant
+gcloud run deploy technology-merchant \
   --source . \
   --region asia-southeast1 \
   --update-build-env-vars="NEXT_PUBLIC_TD_RETAIL_API_URL=https://<your-tdretail-service-url>" \
@@ -148,13 +174,19 @@ gcloud run deploy music-merchant \
 
 ## 🧪 Testing & Verification
 ```bash
-# Verify music-merchant build
-cd music-merchant
+# Verify tdretail
+cd tdretail
 pnpm exec tsc --noEmit
 pnpm run build
 
-# Verify tdretail build
-cd ../tdretail
+# Verify music-merchant
+cd ../music-merchant
 pnpm exec tsc --noEmit
+pnpm run build
+
+# Verify technology-merchant
+cd ../technology-merchant
+pnpm exec tsc --noEmit
+pnpm test
 pnpm run build
 ```

@@ -1,4 +1,4 @@
-export type MerchantCategory = 'digital_music' | 'groceries' | 'general';
+export type MerchantCategory = 'digital_music' | 'groceries' | 'tech_accessories' | 'general' | (string & {});
 
 export type SupportMode = 'hybrid_ai_human' | 'ai_first' | 'human_only';
 
