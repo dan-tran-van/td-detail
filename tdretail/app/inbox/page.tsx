@@ -23,6 +23,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { CustomerAuthDialog } from '@/components/CustomerAuthDialog';
 import { Conversation, Merchant, Order, Customer } from '@/lib/types';
 
@@ -37,6 +44,10 @@ export default function ConsolidatedInboxPage() {
   const [selectedMerchantFilter, setSelectedMerchantFilter] = useState<string>('all');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Store Discovery & Search Dialog state
+  const [isStoreSearchOpen, setIsStoreSearchOpen] = useState(false);
+  const [storeSearchQuery, setStoreSearchQuery] = useState('');
 
   const loadData = async () => {
     try {
@@ -70,6 +81,48 @@ export default function ConsolidatedInboxPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Derive userMerchants: only merchants for which the user actually has conversations
+  const userMerchants = React.useMemo(() => {
+    const merchantIdsWithConversations = new Set(conversations.map((c) => c.merchantId));
+    const list: { id: string; name: string; category?: string }[] = [];
+
+    merchantIdsWithConversations.forEach((mId) => {
+      const found = merchants.find((m) => m.id === mId);
+      if (found) {
+        list.push(found);
+      } else {
+        const sampleConv = conversations.find((c) => c.merchantId === mId);
+        list.push({
+          id: mId,
+          name: sampleConv?.merchantName || 'Other Store',
+        });
+      }
+    });
+
+    return list;
+  }, [conversations, merchants]);
+
+  // Auto-reset merchant filter if selected merchant has no conversations
+  useEffect(() => {
+    if (selectedMerchantFilter !== 'all' && !userMerchants.some((m) => m.id === selectedMerchantFilter)) {
+      setSelectedMerchantFilter('all');
+    }
+  }, [userMerchants, selectedMerchantFilter]);
+
+  // Filtered merchants for the Store Discovery & Search Dialog
+  const filteredSearchMerchants = React.useMemo(() => {
+    const q = storeSearchQuery.trim().toLowerCase();
+    const deduped = Array.from(new Map(merchants.map((m) => [m.id, m])).values());
+    if (!q) return deduped;
+    return deduped.filter(
+      (m) =>
+        m.name.toLowerCase().includes(q) ||
+        (m.category || '').toLowerCase().includes(q) ||
+        (m.description || '').toLowerCase().includes(q) ||
+        (m.tagline || '').toLowerCase().includes(q)
+    );
+  }, [merchants, storeSearchQuery]);
 
   const filteredConversations = conversations.filter((conv) => {
     if (selectedMerchantFilter !== 'all' && conv.merchantId !== selectedMerchantFilter) {
@@ -114,16 +167,27 @@ export default function ConsolidatedInboxPage() {
               </p>
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadData}
-              disabled={loading}
-              className="gap-2 self-start sm:self-auto text-xs"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span>Refresh</span>
-            </Button>
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadData}
+                disabled={loading}
+                className="gap-2 text-xs h-8 cursor-pointer"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </Button>
+
+              <Button
+                size="sm"
+                onClick={() => setIsStoreSearchOpen(true)}
+                className="gap-1.5 text-xs h-8 cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>New Chat</span>
+              </Button>
+            </div>
           </div>
 
           {/* Guest Mode Info Banner */}
@@ -202,39 +266,41 @@ export default function ConsolidatedInboxPage() {
 
           {/* Filter and Search Bar */}
           <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 items-stretch sm:items-center justify-between p-2 rounded-xl bg-card border border-border">
-            {/* Merchant Filter Pills */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-              <Button
-                variant={selectedMerchantFilter === 'all' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setSelectedMerchantFilter('all')}
-                className="text-xs h-7 px-2.5 rounded-lg shrink-0"
-              >
-                All
-              </Button>
+            {/* Merchant Filter Pills - only display if the customer has conversations with 2 or more stores */}
+            {userMerchants.length > 1 && (
+              <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                <Button
+                  variant={selectedMerchantFilter === 'all' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setSelectedMerchantFilter('all')}
+                  className="text-xs h-7 px-2.5 rounded-lg shrink-0 cursor-pointer"
+                >
+                  All
+                </Button>
 
-              {Array.from(new Map(merchants.map((m) => [m.id, m])).values()).map((m) => {
-                const isSelected = selectedMerchantFilter === m.id;
-                const isMusic = m.id === 'merchant_music';
+                {userMerchants.map((m) => {
+                  const isSelected = selectedMerchantFilter === m.id;
+                  const isMusic = m.id === 'merchant_music' || m.category === 'digital_music';
 
-                return (
-                  <Button
-                    key={m.id}
-                    variant={isSelected ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setSelectedMerchantFilter(m.id)}
-                    className="text-xs h-7 px-2.5 rounded-lg gap-1.5 shrink-0"
-                  >
-                    {isMusic ? (
-                      <Disc className="h-3 w-3" />
-                    ) : (
-                      <ShoppingBag className="h-3 w-3" />
-                    )}
-                    <span>{m.name}</span>
-                  </Button>
-                );
-              })}
-            </div>
+                  return (
+                    <Button
+                      key={m.id}
+                      variant={isSelected ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setSelectedMerchantFilter(m.id)}
+                      className="text-xs h-7 px-2.5 rounded-lg gap-1.5 shrink-0 cursor-pointer"
+                    >
+                      {isMusic ? (
+                        <Disc className="h-3 w-3" />
+                      ) : (
+                        <ShoppingBag className="h-3 w-3" />
+                      )}
+                      <span>{m.name}</span>
+                    </Button>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Status and Search */}
             <div className="flex items-center gap-2">
@@ -273,24 +339,54 @@ export default function ConsolidatedInboxPage() {
           </div>
 
           {/* Conversation List Cards */}
-          <div className="space-y-2.5 pb-8">
+          <div className="flex flex-col gap-3 pb-8">
             {loading ? (
               <div className="p-12 text-center text-xs text-muted-foreground">
                 <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-primary" />
                 Loading conversations...
               </div>
+            ) : conversations.length === 0 ? (
+              <Card className="p-10 text-center text-muted-foreground border-dashed bg-card/50">
+                <MessageSquare className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
+                <h3 className="text-base font-semibold text-foreground">No conversations yet</h3>
+                <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                  You haven't started any support inquiries yet. Select a store from the sidebar or start a new chat with Gemini AI.
+                </p>
+                <div className="mt-4">
+                  <Button
+                    size="sm"
+                    onClick={() => setIsStoreSearchOpen(true)}
+                    className="text-xs h-8 gap-1.5 cursor-pointer"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>Start New Chat</span>
+                  </Button>
+                </div>
+              </Card>
             ) : filteredConversations.length === 0 ? (
               <Card className="p-10 text-center text-muted-foreground border-dashed">
-                <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                <Search className="h-8 w-8 mx-auto mb-2 opacity-40" />
                 <p className="text-sm font-semibold text-foreground">No conversations match your filter</p>
-                <p className="text-xs mt-1">Use the sidebar "New Inquiry" button to start a thread.</p>
+                <p className="text-xs mt-1">Try clearing your search query or resetting filters.</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedMerchantFilter('all');
+                    setSelectedStatusFilter('all');
+                  }}
+                  className="mt-3 text-xs h-7 cursor-pointer"
+                >
+                  Reset Filters
+                </Button>
               </Card>
             ) : (
               filteredConversations.map((conv) => {
                 const isMusic = conv.merchantId === 'merchant_music';
 
                 return (
-                  <NextLink key={conv.id} href={`/chat/${conv.id}`}>
+                  <NextLink key={conv.id} href={`/chat/${conv.id}`} className="block focus:outline-none">
                     <Card className="group hover:border-primary/50 transition-all cursor-pointer border-border bg-card shadow-xs">
                       <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div className="flex items-start gap-3.5 min-w-0 flex-1">
@@ -387,6 +483,89 @@ export default function ConsolidatedInboxPage() {
           loadData();
         }}
       />
+
+      {/* Store Discovery & Search Dialog */}
+      <Dialog open={isStoreSearchOpen} onOpenChange={setIsStoreSearchOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span>Select Store for Support</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Choose a merchant to start a new Gemini-grounded customer support inquiry.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 mt-1">
+            {/* Real-time search bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search stores by name, category, or products..."
+                value={storeSearchQuery}
+                onChange={(e) => setStoreSearchQuery(e.target.value)}
+                className="pl-9 pr-9 h-9 text-xs"
+                autoFocus
+              />
+              {storeSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setStoreSearchQuery('')}
+                  className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground text-xs cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Merchant Cards List */}
+            <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
+              {filteredSearchMerchants.length === 0 ? (
+                <div className="p-8 text-center text-xs text-muted-foreground border border-dashed rounded-lg">
+                  No stores match "{storeSearchQuery}"
+                </div>
+              ) : (
+                filteredSearchMerchants.map((m) => {
+                  const isMusic = m.id === 'merchant_music' || m.category === 'digital_music';
+                  const ItemIcon = isMusic ? Disc : ShoppingBag;
+
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        setIsStoreSearchOpen(false);
+                        setStoreSearchQuery('');
+                        router.push(`/chat/new?merchantId=${m.id}`);
+                      }}
+                      className="w-full text-left p-3 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-muted/50 transition-all flex items-start gap-3 group cursor-pointer"
+                    >
+                      <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                        <ItemIcon className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors">
+                            {m.name}
+                          </span>
+                          <Badge variant="outline" className="text-[10px] h-4 px-1.5 capitalize">
+                            {(m.category || '').replace('_', ' ')}
+                          </Badge>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground line-clamp-1">
+                          {m.tagline || m.description || m.supportPolicy?.returns || 'Official Store Support'}
+                        </p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 self-center" />
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

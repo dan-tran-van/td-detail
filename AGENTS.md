@@ -121,8 +121,14 @@ All integration between storefronts and `tdretail` is purely HTTP REST with CORS
   - **System Audit Filtering**: Internal system audit messages (`m.sender === 'system'`, e.g. "Conversation claimed...") must be filtered out from `contents` so they never create spurious `model` turns.
   - **Consecutive Turn Merging**: Consecutive user turns or consecutive model turns are merged into a single turn separated by double newlines (`\n\n`).
   - **Merchant Specialist Messages (`sender: 'human_agent'`)**: Human specialist replies from `/merchant/escalations` are mapped to `role: 'model'` and explicitly attributed with `[Human Support Specialist (${msg.senderName})]: ${text}`. Gemini is instructed via system prompt to treat human specialist actions as authoritative ground truth and cooperate with their decisions.
-- **Dynamic Domain Grounding (Zero Hardcoded Categories)**:
+- **Dynamic Domain Grounding & Support Intelligence (Zero Hardcoded Categories)**:
   - Both live tool responses and fallback engines (`formatDynamicOrderResponse` and `formatDynamicPolicyResponse`) are 100% data-driven.
+  - **General Merchant Customer Support**: Handles broad merchant support inquiries (shipping timelines, warranty claims, returns, licensing/compatibility, store operating hours) knowledgeably without forcing order lookups.
+  - **Financial & Refund Guardrails**:
+    - Direct funds transfers or credit card refunds cannot be processed directly inside chat.
+    - Strictly quotes and enforces merchant ground-truth refund and return policies (`merchant.supportPolicy.refunds` and `returns`).
+    - **No Media Uploads in Chat**: Chat does not accept photo or video file attachments. When reporting damaged, defective, or incorrect products, the agent instructs customers to email photos/videos and proof of purchase directly to `${merchant.supportEmail}` referencing their Order ID.
+    - Contested claims or exceptions beyond policy are escalated via `requestHumanEscalation`.
   - **Never hardcode merchant categories** (e.g. `if (merchant.category === 'digital_music')`). All responses dynamically format:
     1. Verified order state: items, quantities, digital license keys, direct vault download links, tracking numbers, carrier names, delivery ETAs, and courier notes.
     2. Dynamic support policies: dynamically quotes `merchant.supportPolicy.returns`, `refunds`, `deliveryOrDownload`, and `escalationThreshold`.
@@ -131,6 +137,15 @@ All integration between storefronts and `tdretail` is purely HTTP REST with CORS
   - Candidate parts and thought signatures are preserved across turns.
   - Responses strictly use clean Markdown bullet points (`*` or `- `) with double newlines between paragraphs. Never use raw unicode bullet characters (`•`).
 - **Grounded Fallback Engine**: When `GEMINI_API_KEY` is not present or returns HTTP 429 quota exhaustion, `executeGroundedFallbackEngine()` kicks in deterministically to query the database and answer order and policy questions without hallucinations.
+
+### E. Scoped Multi-Merchant Navigation & 1-Click Store Discovery (`ModernAppShell`, `/inbox`)
+- **Scoped Sidebar & Inbox Display**:
+  - Sidebar (`ModernAppShell`) and inbox (`/inbox`) derive merchant sections strictly from the active customer's actual stored conversations (`group.convs.length > 0`). Empty placeholder merchant groups are never rendered for stores the customer hasn't chatted with.
+  - Inbox filter pills dynamically adapt and only appear when the user has conversations across multiple merchants.
+- **Fast Merchant Search & Blank Chat Start**:
+  - Replaces heavy multi-field modal forms with a lightweight **Store Discovery & Search Dialog**.
+  - Shoppers filter participating stores in real time and click to immediately enter a blank chat panel at `/chat/new?merchantId=...`.
+  - The thread page renders a welcome state, quick suggested question chips, and an optional order linker dropdown without creating empty ghost records in the database until the first question is sent.
 
 ---
 

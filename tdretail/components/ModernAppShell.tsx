@@ -20,11 +20,14 @@ import {
   PanelLeft,
   PanelLeftClose,
   LogOut,
+  Search,
+  ArrowRight,
 } from 'lucide-react';
 import { CustomerAuthDialog } from '@/components/CustomerAuthDialog';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Dialog,
@@ -115,17 +118,11 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
   const [availableCustomers, setAvailableCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // New Ticket Dialog state
+  // New Ticket Dialog & Search state
   const [isNewTicketOpen, setIsNewTicketOpen] = useState(false);
+  const [merchantSearchQuery, setMerchantSearchQuery] = useState('');
   const [isPersonaDialogOpen, setIsPersonaDialogOpen] = useState(false);
   const [isSwitchingPersona, setIsSwitchingPersona] = useState(false);
-  const [newMerchantId, setNewMerchantId] = useState('merchant_music');
-  const [newOrderId, setNewOrderId] = useState('');
-  const [newSubject, setNewSubject] = useState('');
-  const [newMessage, setNewMessage] = useState('');
-  const [availableOrders, setAvailableOrders] = useState<Order[]>([]);
-  const [isCreatingTicket, setIsCreatingTicket] = useState(false);
-  const [ticketError, setTicketError] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
@@ -152,13 +149,6 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
         const mData = await merchRes.json();
         setMerchants(mData.merchants || []);
       }
-
-      // 4. Orders for dialog
-      const ordRes = await fetch('/api/orders');
-      if (ordRes.ok) {
-        const oData = await ordRes.json();
-        setAvailableOrders(oData.orders || []);
-      }
     } catch (e) {
       console.error('App shell fetch error:', e);
     } finally {
@@ -172,33 +162,40 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [pathname, activeConversationId]);
 
-
-  // Group conversations by merchant
+  // Group conversations by merchant - strictly scoped to user's conversation history
   const groupedConversations = useMemo(() => {
-    const merchantMap = new Map<string, { merchant: Merchant | { id: string; name: string }; convs: Conversation[] }>();
+    const merchantMap = new Map<string, { merchant: Merchant | { id: string; name: string; category?: string }; convs: Conversation[] }>();
 
-    // Initialize with known merchants
-    merchants.forEach((m) => {
-      merchantMap.set(m.id, { merchant: m, convs: [] });
-    });
-
-    // Populate conversations
+    // Populate ONLY for merchants with actual conversations
     conversations.forEach((conv) => {
       const mId = conv.merchantId || 'other';
       if (!merchantMap.has(mId)) {
+        const found = merchants.find((m) => m.id === mId);
         merchantMap.set(mId, {
-          merchant: { id: mId, name: conv.merchantName || 'Other Store' },
+          merchant: found || { id: mId, name: conv.merchantName || 'Other Store' },
           convs: [],
         });
       }
       merchantMap.get(mId)!.convs.push(conv);
     });
 
-    // Sort merchants: those with active conversations first, then alphabetical
-    return Array.from(merchantMap.values()).filter(
-      (group) => group.convs.length > 0 || merchants.some((m) => m.id === group.merchant.id)
-    );
+    // Only return merchant groups that have at least one conversation
+    return Array.from(merchantMap.values()).filter((group) => group.convs.length > 0);
   }, [conversations, merchants]);
+
+  // Filtered merchants for the Store Discovery & Search Dialog
+  const filteredMerchants = useMemo(() => {
+    const query = merchantSearchQuery.trim().toLowerCase();
+    const deduped = Array.from(new Map(merchants.map((m) => [m.id, m])).values());
+    if (!query) return deduped;
+    return deduped.filter(
+      (m) =>
+        m.name.toLowerCase().includes(query) ||
+        (m.category || '').toLowerCase().includes(query) ||
+        (m.description || '').toLowerCase().includes(query) ||
+        (m.tagline || '').toLowerCase().includes(query)
+    );
+  }, [merchants, merchantSearchQuery]);
 
   const switchCustomer = async (customerId: string) => {
     try {
@@ -225,42 +222,6 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const handleCreateTicket = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setTicketError(null);
-    setIsCreatingTicket(true);
-
-    try {
-      const res = await fetch('/api/conversations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          merchantId: newMerchantId,
-          orderId: newOrderId || undefined,
-          subject: newSubject,
-          initialMessage: newMessage,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setTicketError(data.error || 'Failed to start inquiry');
-        setIsCreatingTicket(false);
-        return;
-      }
-
-      setIsNewTicketOpen(false);
-      setNewSubject('');
-      setNewMessage('');
-      setNewOrderId('');
-      await fetchData();
-      router.push(`/chat/${data.conversation.id}`);
-    } catch (err: any) {
-      setTicketError(err.message || 'Network error');
-    } finally {
-      setIsCreatingTicket(false);
-    }
-  };
 
   const handleSignOut = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -507,112 +468,86 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
         {children}
       </SidebarInset>
 
-      {/* New Support Inquiry Modal Dialog */}
+      {/* New Support Inquiry - Merchant Search & Select Modal Dialog */}
       <Dialog open={isNewTicketOpen} onOpenChange={setIsNewTicketOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              <span>Start New Support Conversation</span>
+              <span>Select Store to Chat With</span>
             </DialogTitle>
             <DialogDescription>
-              Submit an inquiry to any participating merchant. Gemini AI verifies your order details
-              and context server-side.
+              Choose any participating merchant to start a new chat. Gemini AI grounds answers in the store's verified orders and policies.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleCreateTicket} className="space-y-4 pt-2">
-            {ticketError && (
-              <div className="p-3 text-xs bg-destructive/10 border border-destructive/30 text-destructive rounded-lg flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-                <span>{ticketError}</span>
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Target Storefront</label>
-              <select
-                value={newMerchantId}
-                onChange={(e) => {
-                  setNewMerchantId(e.target.value);
-                  setNewOrderId('');
-                }}
-                className="w-full h-9 rounded-lg border border-border bg-background px-3 text-xs"
-              >
-                {Array.from(new Map(merchants.map((m) => [m.id, m])).values()).map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name} ({m.category === 'digital_music' ? 'Digital Music' : 'Groceries'})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground flex items-center justify-between">
-                <span>Link Order (Optional)</span>
-                <span className="text-muted-foreground text-[10px]">
-                  Provides live server grounding to Gemini
-                </span>
-              </label>
-              <select
-                value={newOrderId}
-                onChange={(e) => setNewOrderId(e.target.value)}
-                className="w-full h-9 rounded-lg border border-border bg-background px-3 text-xs"
-              >
-                <option value="">No linked order (General inquiry)</option>
-                {availableOrders
-                  .filter((o) => o.merchantId === newMerchantId)
-                  .map((o) => (
-                    <option key={o.orderId} value={o.orderId}>
-                      Order #{o.orderId} - {o.orderStatusDisplay} (${o.totalAmount.toFixed(2)})
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Topic / Subject</label>
-              <input
+          <div className="space-y-4 pt-2">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="h-4 w-4 absolute left-3 top-2.5 text-muted-foreground pointer-events-none" />
+              <Input
                 type="text"
-                required
-                placeholder="e.g., Where is my delivery? or License key question"
-                value={newSubject}
-                onChange={(e) => setNewSubject(e.target.value)}
-                className="w-full h-9 rounded-lg border border-border bg-background px-3 text-xs"
+                placeholder="Search stores by name, category, or keywords..."
+                value={merchantSearchQuery}
+                onChange={(e) => setMerchantSearchQuery(e.target.value)}
+                className="pl-9 pr-14 text-xs h-9"
+                autoFocus
               />
+              {merchantSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setMerchantSearchQuery('')}
+                  className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground text-xs cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Initial Question</label>
-              <textarea
-                required
-                rows={3}
-                placeholder="Describe your issue or ask a question..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background p-3 text-xs resize-none"
-              />
-            </div>
+            {/* Merchant Cards List */}
+            <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
+              {filteredMerchants.length === 0 ? (
+                <div className="p-8 text-center text-xs text-muted-foreground border border-dashed rounded-lg">
+                  No stores match "{merchantSearchQuery}"
+                </div>
+              ) : (
+                filteredMerchants.map((m) => {
+                  const ItemIcon = getMerchantIcon(m.id, m.category);
 
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setIsNewTicketOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" size="sm" disabled={isCreatingTicket} className="gap-2">
-                {isCreatingTicket ? (
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Sparkles className="h-3.5 w-3.5" />
-                )}
-                <span>Start Conversation</span>
-              </Button>
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        setIsNewTicketOpen(false);
+                        setMerchantSearchQuery('');
+                        router.push(`/chat/new?merchantId=${m.id}`);
+                      }}
+                      className="w-full text-left p-3 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-muted/50 transition-all flex items-start gap-3 group cursor-pointer"
+                    >
+                      <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                        <ItemIcon className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors">
+                            {m.name}
+                          </span>
+                          <Badge variant="outline" className="text-[10px] h-4 px-1.5 capitalize">
+                            {(m.category || '').replace('_', ' ')}
+                          </Badge>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground line-clamp-1">
+                          {m.tagline || m.description || m.supportPolicy?.returns || 'Official Store Support'}
+                        </p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 self-center" />
+                    </button>
+                  );
+                })
+              )}
             </div>
-          </form>
+          </div>
         </DialogContent>
       </Dialog>
 
