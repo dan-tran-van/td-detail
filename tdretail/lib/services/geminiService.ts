@@ -91,6 +91,7 @@ Support Policy:
 - Refunds: ${merchant.supportPolicy.refunds}
 - Delivery/Fulfillment: ${merchant.supportPolicy.deliveryOrDownload}
 - Escalation Threshold: ${merchant.supportPolicy.escalationThreshold}
+- Support Email: ${merchant.supportEmail}
 
 Customer Profile:
 - Name: ${customer.name}
@@ -102,11 +103,17 @@ Customer Profile:
 CRITICAL RULES:
 1. GROUNDED FACTUALITY: NEVER hallucinate, guess, or invent order statuses, tracking numbers, download keys, or courier positions.
 2. TOOL USAGE: If the customer mentions or asks about an order (e.g., status, tracking, download link, arrival time), you MUST call the "lookupOrderStatus" tool.
-3. AUTHORIZATION: You are strictly scoped to "${merchant.name}". The server will reject orders belonging to other merchants.
-4. HUMAN SPECIALIST COOPERATION: Human specialists from "${merchant.name}" may participate in this thread. When a turn begins with "[Human Support Specialist...]", treat their answers and approvals as authoritative ground truth and cooperate with their decisions.
-5. HUMAN ESCALATION: If the customer asks to speak with a human, or if their issue exceeds the automated refund policy, you MUST call "requestHumanEscalation".
-6. MARKDOWN FORMATTING: Always format your responses using clean Markdown. When presenting lists, items, or summaries, ALWAYS use standard Markdown bullet points ('*' or '-') with each item on its own new line. Never use raw unicode bullet symbols like '•'. Use double newlines between paragraphs and headers for clear spacing.
-7. Be warm, professional, concise, and helpful.`;
+3. GENERAL MERCHANT CUSTOMER SUPPORT: Confidently answer general customer support questions relating to "${merchant.name}", such as store policies, fulfillment timelines, return/exchange steps, warranty procedures, and digital licensing or product guidance. Do not force customers to provide an Order ID if they are asking general questions about policies or store offerings.
+4. FINANCIAL & REFUND GUARDRAILS:
+   - You CANNOT initiate financial transactions, transfer money, or execute credit card refunds directly within the chat.
+   - Strictly quote and adhere to the merchant's ground-truth refund and return policies.
+   - NO MEDIA UPLOADS IN CHAT: The chat interface does not accept image, video, or file uploads. If a customer needs to provide photographic proof, receipts, or inspection media for a damaged, defective, or incorrect item, explicitly instruct them to email their attachments directly to "${merchant.supportEmail}" along with their Order ID.
+   - If a customer disputes a refund, requests exceptions beyond policy, or insists on financial reimbursement, invoke the "requestHumanEscalation" tool.
+5. AUTHORIZATION: You are strictly scoped to "${merchant.name}". The server will reject orders belonging to other merchants.
+6. HUMAN SPECIALIST COOPERATION: Human specialists from "${merchant.name}" may participate in this thread. When a turn begins with "[Human Support Specialist...]", treat their answers and approvals as authoritative ground truth and cooperate with their decisions.
+7. HUMAN ESCALATION: If the customer asks to speak with a human, or if their issue exceeds the automated refund policy, you MUST call "requestHumanEscalation".
+8. MARKDOWN FORMATTING: Always format your responses using clean Markdown. When presenting lists, items, or summaries, ALWAYS use standard Markdown bullet points ('*' or '-') with each item on its own new line. Never use raw unicode bullet symbols like '•'. Use double newlines between paragraphs and headers for clear spacing.
+9. Be warm, professional, concise, and helpful.`;
 
     const toolDeclarations = [
       {
@@ -416,7 +423,11 @@ CRITICAL RULES:
       lowerMsg.includes('money back') ||
       lowerMsg.includes('cancel order') ||
       lowerMsg.includes('return') ||
-      lowerMsg.includes('chargeback');
+      lowerMsg.includes('chargeback') ||
+      lowerMsg.includes('damaged') ||
+      lowerMsg.includes('defective') ||
+      lowerMsg.includes('broken') ||
+      lowerMsg.includes('faulty');
 
     if (isRefundQuery) {
       const refundPolicyText = this.formatDynamicPolicyResponse({
@@ -624,7 +635,11 @@ CRITICAL RULES:
         lines.push(`* **Escalation Priority:** ${merchant.supportPolicy.escalationThreshold}`);
       }
       lines.push('');
-      lines.push(`If you would like to proceed with a return, cancellation, or human specialist review, please reply here or click "Request Human Assistance" and our team will assist you immediately!`);
+      lines.push(`**Important Notice Regarding Financial Claims & Evidence:**`);
+      lines.push(`* For security and compliance, direct money transfers or automated refunds cannot be executed directly within chat.`);
+      lines.push(`* Our chat system does not accept photo or video file uploads. If your refund request is due to a damaged, defective, or incorrect item, please email your photos/videos and proof of purchase directly to **${merchant.supportEmail}** with Order ID \`#${order.orderId}\`.`);
+      lines.push('');
+      lines.push(`If you would like to proceed with a formal return, cancellation, or human specialist review, please let me know or click "Request Human Assistance" and our team will assist you immediately!`);
     } else if (isShippingOrEta && merchant.supportPolicy?.deliveryOrDownload) {
       lines.push(`**Fulfillment Policy:** ${merchant.supportPolicy.deliveryOrDownload}`);
       lines.push('');
@@ -647,7 +662,9 @@ CRITICAL RULES:
   }): string {
     const { merchant, customer, customerMessage } = params;
     const lowerMsg = customerMessage.toLowerCase();
-    const isRefund = Boolean(lowerMsg.match(/refund|cancel|return|money back|chargeback/i));
+    const isRefund = Boolean(lowerMsg.match(/refund|cancel|return|money back|chargeback|damage|defect|broken|faulty/i));
+    const isShipping = Boolean(lowerMsg.match(/ship|deliver|track|arrive|eta|courier|dispatch/i));
+    const isWarranty = Boolean(lowerMsg.match(/warranty|guarantee|repair|replacement/i));
 
     if (isRefund) {
       const parts = [
@@ -660,21 +677,48 @@ CRITICAL RULES:
         parts.push(`* **Escalation Priority:** ${merchant.supportPolicy.escalationThreshold}`);
       }
       parts.push('');
-      parts.push(`To proceed with a refund or cancellation, please provide your **Order ID** or let me know if you would like to connect with a senior support specialist.`);
+      parts.push(`**Financial & Evidence Submission Guidelines:**`);
+      parts.push(`* Financial transactions or automatic credit card refunds cannot be processed directly inside this chat window.`);
+      parts.push(`* Our chat system does not accept direct photo, video, or receipt uploads. If you are reporting a damaged, defective, or incorrect product, please email your photo evidence directly to **${merchant.supportEmail}** referencing your Order ID.`);
+      parts.push('');
+      parts.push(`To proceed with a refund or cancellation review, please provide your **Order ID** or click "Request Human Assistance" to speak with a senior specialist.`);
       return parts.join('\n');
     }
 
-    // General merchant assistance
+    if (isShipping) {
+      return [
+        `Here is the fulfillment and delivery information for **${merchant.name}**:`,
+        '',
+        `* **Delivery & Fulfillment:** ${merchant.supportPolicy?.deliveryOrDownload || 'Standard fulfillment applies.'}`,
+        `* **Support Contact:** ${merchant.supportEmail}`,
+        '',
+        `If you have an active order, please provide your **Order ID** (such as \`#ORD-...\`) and I will look up real-time carrier tracking, delivery ETA, and fulfillment notes for you.`,
+      ].join('\n');
+    }
+
+    if (isWarranty) {
+      return [
+        `Here is the warranty and coverage information for **${merchant.name}**:`,
+        '',
+        `* **Warranty & Returns:** ${merchant.supportPolicy?.returns || 'Standard return and warranty guidelines apply.'}`,
+        `* **Claims Process:** If you require warranty assistance or replacement parts, please email our support team at **${merchant.supportEmail}** with your purchase receipt and product details. (Note that chat does not accept direct file uploads).`,
+        '',
+        `Feel free to provide your **Order ID** if you would like me to check your purchase date and coverage status!`,
+      ].join('\n');
+    }
+
+    // General merchant assistance (greetings, policies, contact)
     return [
-      `Hello ${customer.name}! I am your AI Support Assistant for **${merchant.name}**.`,
+      `Hello ${customer.name}! I am your AI Customer Support Specialist for **${merchant.name}**.`,
       '',
-      `I can help you look up real-time order tracking, access digital license downloads, or answer questions regarding our store policies:`,
+      `I can help answer questions regarding our store policies, fulfillment timelines, warranty procedures, or look up your order status:`,
       '',
       `* **Returns:** ${merchant.supportPolicy?.returns || 'Standard return policy applies.'}`,
       `* **Refunds:** ${merchant.supportPolicy?.refunds || 'Standard refund policy applies.'}`,
       `* **Fulfillment:** ${merchant.supportPolicy?.deliveryOrDownload || 'Standard fulfillment applies.'}`,
+      `* **Direct Support Email:** ${merchant.supportEmail}`,
       '',
-      `To check an order, please provide your Order ID (such as \`#ORD-...\`), or click "Request Human Assistance" if you need immediate human review.`,
+      `Feel free to ask any question regarding our products and policies, or provide your Order ID (such as \`#ORD-...\`) to check your shipment!`,
     ].join('\n');
   }
 }

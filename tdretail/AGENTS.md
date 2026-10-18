@@ -52,7 +52,8 @@ TD Retail is an AI-powered multi-merchant customer support platform built on Nex
 
 ### A. Gemini-style Chat & Inbox (`/inbox`, `/chat/[conversationId]`)
 - **Shell**: Wrapped in [components/ModernAppShell.tsx](file:///home/dan/Documents/projects/nextjs-projects/tdretail/components/ModernAppShell.tsx) with a collapsible left sidebar containing:
-  - New Ticket / Inquiry creation button.
+  - **Scoped Multi-Merchant Listing**: Displays conversations grouped strictly under merchants where the user has existing messages (`group.convs.length > 0`). Empty placeholder merchant headers are never shown.
+  - **1-Click Store Discovery & Search Dialog**: Replaces heavy modal forms with an instant filterable merchant list that directs users to `/chat/new?merchantId=...` for a clean, blank start.
   - Active conversation listing with unread / escalation badges.
   - Shopper Persona switcher at the bottom footer.
 - **Message Rendering & Markdown**:
@@ -60,6 +61,9 @@ TD Retail is an AI-powered multi-merchant customer support platform built on Nex
   - `remark-breaks` is mandatory to ensure single newlines render as line breaks (`<br />`) rather than collapsing into single paragraphs.
   - Code blocks, tables, bold/italic, lists (`- ` or `* `), blockquotes, and links are styled strictly using semantic shadcn classes with Tailwind typography prose extensions.
   - Interactive Gemini Tool Calls inspector button to show execution details.
+- **New Conversation Experience (`/chat/new?merchantId=...`)**:
+  - Displays a welcoming empty state card with store icon, description, suggested prompt chips, and an optional order linker dropdown.
+  - Avoids creating empty ghost threads in the database until the first question is sent.
 
 ### B. Gemini Agent Service Architecture (`lib/services/geminiService.ts`)
 - **Active Model**: Uses `gemini-3.5-flash-lite` with `@google/genai` SDK.
@@ -73,15 +77,21 @@ TD Retail is an AI-powered multi-merchant customer support platform built on Nex
   - **System Message Filtering**: Internal audit messages (`m.sender === 'system'`, e.g., "Conversation claimed...") must be filtered out from `contents` so they never create invalid pseudo-model turns.
   - **Consecutive Turn Merging**: Consecutive user turns or consecutive model turns are merged into a single turn separated by double newlines (`\n\n`).
   - **Merchant Specialist Attribution (`sender: 'human_agent'`)**: Human specialist replies from `/merchant/escalations` are mapped to `role: 'model'` and explicitly prefixed with `[Human Support Specialist (${msg.senderName})]: ${text}`. The Gemini system prompt instructs the agent to treat specialist decisions as authoritative ground truth and cooperate with their actions.
-- **Dynamic Domain Grounding (Zero Hardcoded Categories)**:
+- **Dynamic Domain Grounding & Support Intelligence (Zero Hardcoded Categories)**:
   - Both live tool responses and fallback engines (`formatDynamicOrderResponse` and `formatDynamicPolicyResponse`) are 100% data-driven.
+  - **General Merchant Customer Support**: Handles broad merchant support inquiries (shipping timelines, warranty claims, returns, licensing/compatibility, store operating hours) knowledgeably without forcing order lookups.
+  - **Financial & Refund Guardrails**:
+    - Direct funds transfers or credit card refunds cannot be processed directly inside chat.
+    - Strictly quotes and enforces merchant ground-truth refund and return policies (`merchant.supportPolicy.refunds` and `returns`).
+    - **No Media Uploads in Chat**: Chat does not accept photo or video file attachments. When reporting damaged, defective, or incorrect products, the agent instructs customers to email photos/videos and proof of purchase directly to `${merchant.supportEmail}` referencing their Order ID.
+    - Contested claims or exceptions beyond policy are escalated via `requestHumanEscalation`.
   - **Never hardcode merchant categories** (e.g. `if (merchant.category === 'digital_music')`). All responses dynamically format:
     1. Verified order state: items, quantities, digital license keys, direct vault download links, tracking numbers, carrier names, delivery ETAs, and courier notes.
     2. Dynamic support policies: dynamically quotes `merchant.supportPolicy.returns`, `refunds`, `deliveryOrDownload`, and `escalationThreshold`.
   - Seamlessly handles newly registered storefronts onboarded via `/merchant/register` or `POST /api/merchants` with zero code modifications.
 - **Grounded Fallback Engine**:
   - If the Gemini API key is missing or encounters rate limits, `executeGroundedFallbackEngine()` handles requests locally with verified database checks.
-  - Features smart intent classification (detects refund/cancellation, escalation, order status queries, and general inquiries) dynamically weaving merchant policies and order details.
+  - Features smart intent classification (detects refund/cancellation, damage/defect, escalation, order status queries, and general inquiries) dynamically weaving merchant policies and order details.
   - Fallback string templates must use standard Markdown bullets (`* ` or `- `) with double newlines rather than unicode bullet characters (`• `).
 
 ### C. Gmail-style Standalone Outbox (`/outbox`) & SendGrid Email Integration

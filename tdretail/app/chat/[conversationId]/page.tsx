@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import NextLink from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   Disc,
   ShoppingBag,
@@ -42,8 +42,12 @@ import { Suspense } from 'react';
 
 function ConversationThreadInner() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const conversationId = params?.conversationId as string;
   const router = useRouter();
+
+  const isNewConversation = conversationId === 'new';
+  const merchantIdParam = searchParams.get('merchantId') || 'merchant_music';
 
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [merchant, setMerchant] = useState<Merchant | null>(null);
@@ -51,6 +55,10 @@ function ConversationThreadInner() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Orders for linking in new chat
+  const [availableOrders, setAvailableOrders] = useState<any[]>([]);
+  const [selectedOrderId, setSelectedOrderId] = useState<string>('');
 
   // Input & sending
   const [inputText, setInputText] = useState('');
@@ -104,6 +112,56 @@ function ConversationThreadInner() {
     try {
       if (!silent) setLoading(true);
 
+      const sessRes = await fetch('/api/session');
+      let currentCustomer: Customer | null = null;
+      if (sessRes.ok) {
+        const sData = await sessRes.json();
+        currentCustomer = sData.customer;
+        setCustomer(sData.customer);
+      }
+
+      if (isNewConversation) {
+        // Fetch merchant details for the specified merchantId
+        const merchRes = await fetch(`/api/merchants/${merchantIdParam}`);
+        if (merchRes.ok) {
+          const mData = await merchRes.json();
+          setMerchant(mData.merchant);
+        } else {
+          const allRes = await fetch('/api/merchants');
+          if (allRes.ok) {
+            const allData = await allRes.json();
+            const found = (allData.merchants || []).find((m: any) => m.id === merchantIdParam);
+            if (found) setMerchant(found);
+          }
+        }
+
+        // Fetch user's orders for this merchant if any
+        const ordRes = await fetch(`/api/orders?merchantId=${merchantIdParam}`);
+        if (ordRes.ok) {
+          const oData = await ordRes.json();
+          setAvailableOrders(oData.orders || []);
+        }
+
+        setMessages([]);
+        setLinkedOrder(null);
+        setConversation({
+          id: 'new',
+          customerId: currentCustomer?.id || '',
+          customerEmail: currentCustomer?.email || '',
+          customerName: currentCustomer?.name || '',
+          merchantId: merchantIdParam,
+          subject: 'New Inquiry',
+          status: 'active',
+          lastMessageSnippet: 'Start a new conversation',
+          lastMessageSender: 'customer',
+          lastMessageAt: new Date().toISOString(),
+          unreadByCustomer: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+        return;
+      }
+
       const res = await fetch(`/api/conversations/${conversationId}`);
       if (res.ok) {
         const data = await res.json();
@@ -113,7 +171,6 @@ function ConversationThreadInner() {
 
         const newMessages: Message[] = data.messages || [];
         setMessages((prev) => {
-          // Compare message count or IDs to avoid re-triggering state when identical
           if (
             prev.length === newMessages.length &&
             prev[prev.length - 1]?.id === newMessages[newMessages.length - 1]?.id
@@ -122,12 +179,6 @@ function ConversationThreadInner() {
           }
           return newMessages;
         });
-      }
-
-      const sessRes = await fetch('/api/session');
-      if (sessRes.ok) {
-        const sData = await sessRes.json();
-        setCustomer(sData.customer);
       }
     } catch (err) {
       console.error('Error fetching conversation thread:', err);
@@ -138,11 +189,13 @@ function ConversationThreadInner() {
 
   useEffect(() => {
     loadThreadData();
-    const interval = setInterval(() => {
-      loadThreadData(true);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [conversationId]);
+    if (!isNewConversation) {
+      const interval = setInterval(() => {
+        loadThreadData(true);
+      }, 4000);
+      return () => clearInterval(interval);
+    }
+  }, [conversationId, merchantIdParam]);
 
   useEffect(() => {
     if (messages.length === 0) return;
@@ -174,14 +227,48 @@ function ConversationThreadInner() {
     setIsSending(true);
 
     try {
-      const res = await fetch(`/api/conversations/${conversationId}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: textToSend }),
-      });
+      if (isNewConversation) {
+        // Optimistic customer message
+        const optimisticMsg: Message = {
+          id: `msg_cust_${Date.now()}`,
+          conversationId: 'new',
+          sender: 'customer',
+          senderName: customer?.name || 'Customer',
+          content: textToSend,
+          timestamp: new Date().toISOString(),
+        };
+        setMessages([optimisticMsg]);
 
-      if (res.ok) {
-        await loadThreadData(true);
+        const res = await fetch('/api/conversations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            merchantId: merchantIdParam,
+            orderId: selectedOrderId || undefined,
+            subject: textToSend.slice(0, 60),
+            initialMessage: textToSend,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          // Update URL to the newly created conversation
+          router.replace(`/chat/${data.conversation.id}`);
+          return;
+        } else {
+          const errData = await res.json();
+          console.error('Failed to create conversation:', errData.error);
+        }
+      } else {
+        const res = await fetch(`/api/conversations/${conversationId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: textToSend }),
+        });
+
+        if (res.ok) {
+          await loadThreadData(true);
+        }
       }
     } catch (err) {
       console.error('Error sending message:', err);
@@ -328,7 +415,7 @@ function ConversationThreadInner() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h2 className="text-sm sm:text-base font-bold text-foreground truncate">
-                      {conversation.subject}
+                      {isNewConversation ? `New Inquiry with ${merchant?.name || 'Store'}` : conversation.subject}
                     </h2>
                     <Badge variant="outline" className="text-[10px] h-4 px-1.5 hidden sm:inline-flex">
                       {merchant?.name}
@@ -337,60 +424,71 @@ function ConversationThreadInner() {
                   <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                     <span>{merchant?.supportEmail}</span>
                     <span>•</span>
-                    <span className="font-mono">Thread #{conversation.id}</span>
+                    <span className="font-mono">
+                      {isNewConversation ? 'New Support Session' : `Thread #${conversation.id}`}
+                    </span>
                   </div>
                 </div>
               </div>
 
               {/* Status and Action Buttons */}
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                {customer && !customer.isGuest && !conversation.customerId?.startsWith('cust_guest_') && (
+                {!isNewConversation && customer && !customer.isGuest && !conversation.customerId?.startsWith('cust_guest_') && (
                   <Badge variant="outline" className="text-[10px] h-6 px-2 gap-1 text-primary border-primary/30 hidden sm:inline-flex">
                     <ShieldCheck className="h-3 w-3" />
                     <span>Linked: {customer.name}</span>
                   </Badge>
                 )}
 
-                {conversation.status === 'active' && (
+                {isNewConversation ? (
                   <Badge variant="secondary" className="text-[11px] h-6 px-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary mr-1 animate-pulse" />
-                    Active AI
+                    <Sparkles className="h-3 w-3 mr-1 text-primary animate-pulse" />
+                    Ready to Chat
                   </Badge>
-                )}
-                {conversation.status === 'escalated' && (
-                  <Badge variant="destructive" className="text-[11px] h-6 px-2">
-                    <AlertTriangle className="h-3 w-3 mr-1" />
-                    Escalated
-                  </Badge>
-                )}
-                {conversation.status === 'resolved' && (
-                  <Badge variant="outline" className="text-[11px] h-6 px-2">
-                    <CheckCircle2 className="h-3 w-3 mr-1 text-primary" />
-                    Resolved
-                  </Badge>
-                )}
+                ) : (
+                  <>
+                    {conversation.status === 'active' && (
+                      <Badge variant="secondary" className="text-[11px] h-6 px-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary mr-1 animate-pulse" />
+                        Active AI
+                      </Badge>
+                    )}
+                    {conversation.status === 'escalated' && (
+                      <Badge variant="destructive" className="text-[11px] h-6 px-2">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        Escalated
+                      </Badge>
+                    )}
+                    {conversation.status === 'resolved' && (
+                      <Badge variant="outline" className="text-[11px] h-6 px-2">
+                        <CheckCircle2 className="h-3 w-3 mr-1 text-primary" />
+                        Resolved
+                      </Badge>
+                    )}
 
-                {conversation.status !== 'escalated' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowEscalateDialog(true)}
-                    className="text-xs h-7 px-2"
-                    title="Escalate to human specialist"
-                  >
-                    <AlertTriangle className="h-3 w-3 mr-1 text-muted-foreground" />
-                    <span className="hidden sm:inline">Request Human</span>
-                  </Button>
-                )}
+                    {conversation.status !== 'escalated' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowEscalateDialog(true)}
+                        className="text-xs h-7 px-2"
+                        title="Escalate to human specialist"
+                      >
+                        <AlertTriangle className="h-3 w-3 mr-1 text-muted-foreground" />
+                        <span className="hidden sm:inline">Request Human</span>
+                      </Button>
+                    )}
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleResolve}
-                  className="text-xs h-7 px-2 text-muted-foreground hover:text-foreground"
-                >
-                  {conversation.status === 'resolved' ? 'Re-open' : 'Resolve'}
-                </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleResolve}
+                      className="text-xs h-7 px-2 text-muted-foreground hover:text-foreground"
+                    >
+                      {conversation.status === 'resolved' ? 'Re-open' : 'Resolve'}
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -495,7 +593,69 @@ function ConversationThreadInner() {
 
             {/* Scrollable Message History */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-              {messages.map((msg) => {
+              {messages.length === 0 ? (
+                <div className="h-full min-h-[360px] flex flex-col items-center justify-center text-center p-6 max-w-lg mx-auto">
+                  <div className="p-3.5 rounded-2xl bg-primary/10 border border-primary/20 text-primary mb-4 shadow-sm">
+                    {merchant?.category === 'digital_music' ? (
+                      <Disc className="h-8 w-8" />
+                    ) : (
+                      <ShoppingBag className="h-8 w-8" />
+                    )}
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-foreground">
+                    Chat with {merchant?.name || 'Store'} Support
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-sm">
+                    {merchant?.description || 'Ask questions about orders, shipping timelines, warranty policies, or store procedures.'}
+                  </p>
+
+                  {/* Optional Order Linker */}
+                  {isNewConversation && availableOrders.length > 0 && (
+                    <div className="w-full mt-4 p-3 bg-muted/40 rounded-xl border border-border text-left">
+                      <label className="text-[11px] font-semibold text-muted-foreground block mb-1.5 flex items-center gap-1.5">
+                        <Package className="h-3.5 w-3.5 text-primary" />
+                        Reference an Order (Optional)
+                      </label>
+                      <select
+                        value={selectedOrderId}
+                        onChange={(e) => setSelectedOrderId(e.target.value)}
+                        className="w-full text-xs bg-background border border-border rounded-lg p-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="">General inquiry (No specific order)</option>
+                        {availableOrders.map((ord) => (
+                          <option key={ord.id} value={ord.id}>
+                            {ord.orderNumber || ord.id} • {ord.items?.map((i: any) => i.title).join(', ')} ({new Intl.NumberFormat('en-US', { style: 'currency', currency: ord.currency || 'USD' }).format(ord.totalAmount)})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Suggested Prompts */}
+                  {merchant?.demoPromptSuggestions && merchant.demoPromptSuggestions.length > 0 && (
+                    <div className="w-full mt-6">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center justify-center gap-1">
+                        <Sparkles className="h-3 w-3 text-primary" />
+                        Suggested Questions
+                      </p>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {merchant.demoPromptSuggestions.map((prompt, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setInputText(prompt)}
+                            className="text-xs text-left px-3 py-1.5 rounded-full bg-card hover:bg-muted border border-border hover:border-primary/50 text-foreground transition-all duration-150 flex items-center gap-1.5 group"
+                          >
+                            <span>{prompt}</span>
+                            <CornerDownRight className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                messages.map((msg) => {
                 const isCustomer = msg.sender === 'customer';
                 const isAI = msg.sender === 'ai';
                 const isHuman = msg.sender === 'human_agent';
@@ -614,27 +774,9 @@ function ConversationThreadInner() {
                     )}
                   </div>
                 );
-              })}
+              }))}
               <div ref={messagesEndRef} />
             </div>
-
-            {/* Suggested Quick Questions */}
-            {merchant?.demoPromptSuggestions && merchant.demoPromptSuggestions.length > 0 && (
-              <div className="px-4 py-2 overflow-x-auto flex items-center gap-1.5 shrink-0 bg-background border-t border-border/40">
-                <span className="text-[10px] text-muted-foreground shrink-0 font-medium">
-                  Suggested:
-                </span>
-                {merchant.demoPromptSuggestions.slice(0, 3).map((prompt, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setInputText(prompt)}
-                    className="text-[11px] whitespace-nowrap px-2.5 py-1 rounded-full bg-muted/70 hover:bg-muted border border-border text-foreground transition-colors"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            )}
 
             {/* Chat Input Bar */}
             <div className="p-3 sm:p-4 border-t border-border/80 bg-background shrink-0">
