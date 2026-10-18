@@ -4,6 +4,7 @@ import { OrderService } from '@/lib/services/orderService';
 import {
   Conversation,
   Customer,
+  Merchant,
   Message,
   ToolCallExecution,
 } from '@/lib/types';
@@ -96,14 +97,16 @@ Customer Profile:
 - Email: ${customer.email}
 - Current Merchant ID: ${conversation.merchantId}
 - Current Thread Order Reference: ${conversation.orderId || 'None specified'}
+- Current Thread Status: ${conversation.status}${conversation.status === 'escalated' ? ' (Escalated to human support specialists)' : ''}
 
 CRITICAL RULES:
 1. GROUNDED FACTUALITY: NEVER hallucinate, guess, or invent order statuses, tracking numbers, download keys, or courier positions.
 2. TOOL USAGE: If the customer mentions or asks about an order (e.g., status, tracking, download link, arrival time), you MUST call the "lookupOrderStatus" tool.
 3. AUTHORIZATION: You are strictly scoped to "${merchant.name}". The server will reject orders belonging to other merchants.
-4. HUMAN ESCALATION: If the customer asks to speak with a human, or if their issue exceeds the automated refund policy, you MUST call "requestHumanEscalation".
-5. MARKDOWN FORMATTING: Always format your responses using clean Markdown. When presenting lists, items, or summaries, ALWAYS use standard Markdown bullet points ('*' or '-') with each item on its own new line. Never use raw unicode bullet symbols like '•'. Use double newlines between paragraphs and headers for clear spacing.
-6. Be warm, professional, concise, and helpful.`;
+4. HUMAN SPECIALIST COOPERATION: Human specialists from "${merchant.name}" may participate in this thread. When a turn begins with "[Human Support Specialist...]", treat their answers and approvals as authoritative ground truth and cooperate with their decisions.
+5. HUMAN ESCALATION: If the customer asks to speak with a human, or if their issue exceeds the automated refund policy, you MUST call "requestHumanEscalation".
+6. MARKDOWN FORMATTING: Always format your responses using clean Markdown. When presenting lists, items, or summaries, ALWAYS use standard Markdown bullet points ('*' or '-') with each item on its own new line. Never use raw unicode bullet symbols like '•'. Use double newlines between paragraphs and headers for clear spacing.
+7. Be warm, professional, concise, and helpful.`;
 
     const toolDeclarations = [
       {
@@ -137,26 +140,62 @@ CRITICAL RULES:
     ];
 
     // Format chat contents - exclude the current incoming message if already saved to history
-    const contents: any[] = [];
-    const prevHistory = history.filter(
-      (m, idx) => !(idx === history.length - 1 && m.sender === 'customer' && m.content === customerMessage)
+    // and exclude system audit messages (which should not be sent as Gemini model turns)
+    const validHistory = history.filter((m) => m.sender !== 'system');
+    const prevHistory = validHistory.filter(
+      (m, idx) => !(idx === validHistory.length - 1 && m.sender === 'customer' && m.content === customerMessage)
     );
 
-    // Include last 6 previous turns
-    for (const msg of prevHistory.slice(-6)) {
-      contents.push({
-        role: msg.sender === 'customer' ? 'user' : 'model',
-        parts: [{ text: msg.content }],
+    const rawTurns: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+
+    // Include last 8 turns of valid conversation
+    for (const msg of prevHistory.slice(-8)) {
+      if (!msg.content || !msg.content.trim()) continue;
+      const role = msg.sender === 'customer' ? 'user' : 'model';
+      let text = msg.content.trim();
+      if (msg.sender === 'human_agent') {
+        text = `[Human Support Specialist (${msg.senderName || 'Staff'})]: ${text}`;
+      }
+      rawTurns.push({
+        role,
+        parts: [{ text }],
       });
     }
-    contents.push({
+
+    rawTurns.push({
       role: 'user',
-      parts: [{ text: customerMessage }],
+      parts: [{ text: customerMessage.trim() }],
     });
+
+    // Enforce strictly alternating turns invariant: user -> model -> user -> model -> ...
+    const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+    for (const turn of rawTurns) {
+      if (contents.length > 0 && contents[contents.length - 1].role === turn.role) {
+        // Merge consecutive turns with the same role into a single turn
+        const lastTurn = contents[contents.length - 1];
+        lastTurn.parts[0].text = `${lastTurn.parts[0].text}\n\n${turn.parts[0].text}`;
+      } else {
+        contents.push({ role: turn.role, parts: [{ text: turn.parts[0].text }] });
+      }
+    }
+
+    // Ensure contents starts with a 'user' turn (Gemini requirement)
+    while (contents.length > 0 && contents[0].role !== 'user') {
+      contents.shift();
+    }
+
+    // If contents became empty, add the customer message
+    if (contents.length === 0) {
+      contents.push({
+        role: 'user',
+        parts: [{ text: customerMessage.trim() }],
+      });
+    }
 
     const toolCallsRecord: ToolCallExecution[] = [];
     let groundedOrderId: string | undefined;
     let groundedOrderStatus: string | undefined;
+    let groundedOrder: any = undefined;
     let escalationTriggered = false;
 
     // Use gemini-3.5-flash-lite which has generous quota and full function calling support
@@ -202,6 +241,7 @@ CRITICAL RULES:
           if (result.success && result.order) {
             groundedOrderId = result.order.orderId;
             groundedOrderStatus = result.order.orderStatus;
+            groundedOrder = result.order;
           }
 
           functionResponseParts.push({
@@ -236,36 +276,56 @@ CRITICAL RULES:
         }
       }
 
-      // Feed function responses back into Gemini for final answer
-      const followupContents = [
+      // Sanitize model candidate parts: keep functionCall and text parts
+      const modelParts = firstCandidate?.content?.parts
+        ? firstCandidate.content.parts.filter((p: any) => p.functionCall || p.text)
+        : [];
+
+      // Feed function responses back into Gemini with proper tool role
+      const followupContents: any[] = [
         ...contents,
-        firstCandidate.content,
         {
-          role: 'user',
+          role: 'model',
+          parts: modelParts.length > 0 ? modelParts : firstCandidate?.content?.parts || [],
+        },
+        {
+          role: 'tool',
           parts: functionResponseParts,
         },
       ];
 
-      const followupResponse = await client.models.generateContent({
-        model: MODEL_NAME,
-        contents: followupContents,
-        config: {
-          systemInstruction: systemPrompt,
-        },
-      });
+      try {
+        const followupResponse = await client.models.generateContent({
+          model: MODEL_NAME,
+          contents: followupContents,
+          config: {
+            systemInstruction: systemPrompt,
+          },
+        });
 
-      const followupCandidate = followupResponse.candidates?.[0];
-      const textParts = followupCandidate?.content?.parts?.filter((p: any) => p.text)?.map((p: any) => p.text).join('\n') || '';
-      finalContent = followupResponse.text || textParts;
+        const followupCandidate = followupResponse.candidates?.[0];
+        const textParts = followupCandidate?.content?.parts?.filter((p: any) => p.text)?.map((p: any) => p.text).join('\n') || '';
+        finalContent = followupResponse.text || textParts;
+      } catch (followupErr) {
+        console.warn('[GeminiAgent] Followup call with tool response encountered error, using grounded formatter:', followupErr);
+      }
 
       if (!finalContent) {
-        // Fallback to grounded summary based on tool results if model text was empty
-        if (groundedOrderId && merchant.category === 'digital_music') {
-          finalContent = `I have verified your order details for **${groundedOrderId}**. Your order is currently **${groundedOrderStatus || 'processed'}**. Let me know how else I can assist!`;
+        if (groundedOrder) {
+          finalContent = this.formatDynamicOrderResponse({
+            merchant,
+            customer,
+            order: groundedOrder,
+            customerMessage,
+          });
         } else if (escalationTriggered) {
           finalContent = `I have escalated this issue to a senior support representative for **${merchant.name}**. They will review your conversation and follow up shortly!`;
         } else {
-          finalContent = 'I checked your details with our system. How can I assist you with this request?';
+          finalContent = this.formatDynamicPolicyResponse({
+            merchant,
+            customer,
+            customerMessage,
+          });
         }
       }
     } else {
@@ -359,19 +419,11 @@ CRITICAL RULES:
       lowerMsg.includes('chargeback');
 
     if (isRefundQuery) {
-      let refundPolicyText = '';
-      if (merchant.category === 'digital_music') {
-        refundPolicyText = `Regarding refunds for **${merchant.name}**:\n\n` +
-          `- **Policy:** ${merchant.supportPolicy.refunds}\n` +
-          `- **Returns:** ${merchant.supportPolicy.returns}\n` +
-          `- **Threshold:** ${merchant.supportPolicy.escalationThreshold}\n\n` +
-          `Because digital audio licenses and cryptographic stem keys are provisioned immediately, automated refunds are restricted once downloaded. If you encountered corrupted files or license provisioning issues, I can escalate your request directly to our billing team. Would you like me to request human specialist review?`;
-      } else {
-        refundPolicyText = `Regarding refunds and returns for **${merchant.name}**:\n\n` +
-          `- **Returns Policy:** ${merchant.supportPolicy.returns}\n` +
-          `- **Refund Policy:** ${merchant.supportPolicy.refunds}\n\n` +
-          `If your order arrived damaged or missing items, reply with photos or details and we will issue an immediate replacement or full refund.`;
-      }
+      const refundPolicyText = this.formatDynamicPolicyResponse({
+        merchant,
+        customer,
+        customerMessage,
+      });
 
       const aiMsg: Message = {
         id: `msg_ai_${crypto.randomUUID()}`,
@@ -440,30 +492,14 @@ CRITICAL RULES:
         return aiMsg;
       }
 
-      // Grounded success response tailored to domain
+      // Grounded success response dynamically tailored from merchant policy & verified order
       const o = lookupResult.order;
-      let replyContent = '';
-
-      if (merchant.category === 'digital_music') {
-        replyContent = `Hello ${customer.name}, I pulled up your verified order details for **${o.orderId}**:\n\n` +
-          `- **Status:** ${o.orderStatusDisplay}\n` +
-          `- **Items:** ${o.items.map((i) => `${i.title} (${i.quantity}x)`).join(', ')}\n` +
-          (o.items[0]?.licenseKey ? `- **License Key:** \`${o.items[0].licenseKey}\`\n` : '') +
-          (o.items[0]?.downloadUrl ? `- **Vault Download Link:** [Direct Download](${o.items[0].downloadUrl})\n` : '') +
-          `- **Fulfillment Details:** ${o.courierNotes || 'Bit-perfect lossless files ready in your vault.'}\n\n` +
-          `According to SoundWave policy, your license and master audio stems can be re-downloaded at any time from your account. Let me know if you need assistance configuring high-res audio playback!`;
-      } else if (merchant.category === 'groceries') {
-        replyContent = `Hello ${customer.name}, here is the live fulfillment status for **${o.orderId}**:\n\n` +
-          `- **Status:** ${o.orderStatusDisplay}\n` +
-          `- **Items:** ${o.items.map((i) => `${i.title} (${i.quantity}x)`).join(', ')}\n` +
-          `- **Delivery Courier:** ${o.carrierOrCourier || 'FreshCart Express Team'}\n` +
-          `- **Estimated Arrival:** ${o.estimatedDelivery || 'Within current delivery window'}\n` +
-          `- **Destination:** ${o.deliveryAddress || customer.defaultAddress || 'On file'}\n` +
-          `- **Dispatch Notes:** ${o.courierNotes || 'Thermal insulated packing with ice packs active.'}\n\n` +
-          `All perishable items are protected by our 100% Farm-Fresh Guarantee. If you need special gate instructions given to the driver, just reply here!`;
-      } else {
-        replyContent = `Order **${o.orderId}** is currently **${o.orderStatusDisplay}**. Total: $${o.totalAmount.toFixed(2)} ${o.currency}.`;
-      }
+      const replyContent = this.formatDynamicOrderResponse({
+        merchant,
+        customer,
+        order: o,
+        customerMessage,
+      });
 
       const aiMsg: Message = {
         id: `msg_ai_${crypto.randomUUID()}`,
@@ -486,12 +522,11 @@ CRITICAL RULES:
     }
 
     // General merchant assistance (policy, greetings, inquiries)
-    let generalReply = `Hello ${customer.name}! I am your AI assistant for **${merchant.name}**.\n\n` +
-      `I can check real-time order tracking, retrieve download license keys, or help you with returns and replacements.\n\n` +
-      `**Merchant Policy Quick Reference:**\n\n` +
-      `- **Returns & Freshness:** ${merchant.supportPolicy.returns}\n` +
-      `- **Refunds:** ${merchant.supportPolicy.refunds}\n\n` +
-      `To check an order, please provide your Order ID (such as \`#ORD-MUS-8821\` or \`#ORD-GROC-5512\`), or click "Request Human Assistance" if you need immediate human review.`;
+    const generalReply = this.formatDynamicPolicyResponse({
+      merchant,
+      customer,
+      customerMessage,
+    });
 
     const aiMsg: Message = {
       id: `msg_ai_${crypto.randomUUID()}`,
@@ -508,5 +543,138 @@ CRITICAL RULES:
 
     await TDStore.addMessage(aiMsg);
     return aiMsg;
+  }
+
+  /**
+   * Dynamically formats a verified order response for ANY merchant based on their
+   * configured SupportPolicy and real-time order state, without hardcoded categories.
+   */
+  private static formatDynamicOrderResponse(params: {
+    merchant: Merchant;
+    customer: Customer;
+    order: any;
+    customerMessage: string;
+  }): string {
+    const { merchant, customer, order, customerMessage } = params;
+    const lowerMsg = customerMessage.toLowerCase();
+    const isRefundOrCancel = Boolean(lowerMsg.match(/refund|cancel|return|money back|chargeback/i));
+    const isShippingOrEta = Boolean(lowerMsg.match(/track|courier|delivery|where is|eta|arrive|ship/i));
+
+    const lines: string[] = [
+      `I have verified the official order details for **#${order.orderId}** with **${merchant.name}**:`,
+      '',
+      `* **Order Status:** ${order.orderStatusDisplay || order.orderStatus}`,
+    ];
+
+    if (order.items && order.items.length > 0) {
+      const itemsList = order.items
+        .map((i: any) => `${i.title} (${i.quantity}x${i.formatOrWeight ? ` • ${i.formatOrWeight}` : ''})`)
+        .join(', ');
+      lines.push(`* **Items:** ${itemsList}`);
+
+      // Digital fulfillments if present
+      const digitalItems = order.items.filter((i: any) => i.licenseKey || i.downloadUrl);
+      for (const d of digitalItems) {
+        if (d.licenseKey) {
+          lines.push(`* **License Key (${d.title}):** \`${d.licenseKey}\``);
+        }
+        if (d.downloadUrl) {
+          lines.push(`* **Direct Vault Download (${d.title}):** [Download Link](${d.downloadUrl})`);
+        }
+      }
+    }
+
+    if (order.totalAmount !== undefined && order.totalAmount !== null) {
+      const symbol = order.currency === 'INR' ? '₹' : order.currency === 'EUR' ? '€' : order.currency === 'GBP' ? '£' : '$';
+      lines.push(`* **Total Amount:** ${symbol}${Number(order.totalAmount).toLocaleString()} ${order.currency || ''}`.trim());
+    }
+
+    if (order.trackingNumber) {
+      lines.push(`* **Tracking Number:** \`${order.trackingNumber}\``);
+    }
+
+    if (order.carrierOrCourier) {
+      lines.push(`* **Carrier / Logistics:** ${order.carrierOrCourier}`);
+    }
+
+    if (order.estimatedDelivery) {
+      lines.push(`* **Estimated Delivery:** ${order.estimatedDelivery}`);
+    }
+
+    if (order.deliveryAddress) {
+      lines.push(`* **Delivery Destination:** ${order.deliveryAddress}`);
+    }
+
+    if (order.courierNotes) {
+      lines.push(`* **Fulfillment & Warranty Notes:** ${order.courierNotes}`);
+    }
+
+    lines.push('');
+
+    // Dynamically integrate merchant's real policy depending on customer inquiry
+    if (isRefundOrCancel) {
+      lines.push(`**${merchant.name} Refund & Cancellation Policy:**`);
+      if (merchant.supportPolicy?.refunds) {
+        lines.push(`* **Refunds:** ${merchant.supportPolicy.refunds}`);
+      }
+      if (merchant.supportPolicy?.returns) {
+        lines.push(`* **Returns:** ${merchant.supportPolicy.returns}`);
+      }
+      if (merchant.supportPolicy?.escalationThreshold) {
+        lines.push(`* **Escalation Priority:** ${merchant.supportPolicy.escalationThreshold}`);
+      }
+      lines.push('');
+      lines.push(`If you would like to proceed with a return, cancellation, or human specialist review, please reply here or click "Request Human Assistance" and our team will assist you immediately!`);
+    } else if (isShippingOrEta && merchant.supportPolicy?.deliveryOrDownload) {
+      lines.push(`**Fulfillment Policy:** ${merchant.supportPolicy.deliveryOrDownload}`);
+      lines.push('');
+      lines.push(`Let me know if you would like me to connect you with a specialist or if you need any other assistance with this shipment!`);
+    } else {
+      lines.push(`Please let me know if you need any additional assistance or would like to speak with a human support specialist!`);
+    }
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Dynamically formats a merchant policy response for ANY merchant based on their
+   * configured SupportPolicy (returns, refunds, delivery, escalation threshold).
+   */
+  private static formatDynamicPolicyResponse(params: {
+    merchant: Merchant;
+    customer: Customer;
+    customerMessage: string;
+  }): string {
+    const { merchant, customer, customerMessage } = params;
+    const lowerMsg = customerMessage.toLowerCase();
+    const isRefund = Boolean(lowerMsg.match(/refund|cancel|return|money back|chargeback/i));
+
+    if (isRefund) {
+      const parts = [
+        `Regarding refunds, cancellations, and returns for **${merchant.name}**:`,
+        '',
+        `* **Refund Policy:** ${merchant.supportPolicy?.refunds || 'Refund requests are subject to merchant review.'}`,
+        `* **Returns Policy:** ${merchant.supportPolicy?.returns || 'Please contact support with order details for returns.'}`,
+      ];
+      if (merchant.supportPolicy?.escalationThreshold) {
+        parts.push(`* **Escalation Priority:** ${merchant.supportPolicy.escalationThreshold}`);
+      }
+      parts.push('');
+      parts.push(`To proceed with a refund or cancellation, please provide your **Order ID** or let me know if you would like to connect with a senior support specialist.`);
+      return parts.join('\n');
+    }
+
+    // General merchant assistance
+    return [
+      `Hello ${customer.name}! I am your AI Support Assistant for **${merchant.name}**.`,
+      '',
+      `I can help you look up real-time order tracking, access digital license downloads, or answer questions regarding our store policies:`,
+      '',
+      `* **Returns:** ${merchant.supportPolicy?.returns || 'Standard return policy applies.'}`,
+      `* **Refunds:** ${merchant.supportPolicy?.refunds || 'Standard refund policy applies.'}`,
+      `* **Fulfillment:** ${merchant.supportPolicy?.deliveryOrDownload || 'Standard fulfillment applies.'}`,
+      '',
+      `To check an order, please provide your Order ID (such as \`#ORD-...\`), or click "Request Human Assistance" if you need immediate human review.`,
+    ].join('\n');
   }
 }

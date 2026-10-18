@@ -32,6 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { CustomerAuthDialog } from '@/components/CustomerAuthDialog';
 import { Conversation, Merchant, Message, Customer } from '@/lib/types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -73,6 +74,22 @@ function ConversationThreadInner() {
   const [humanAgentReplyText, setHumanAgentReplyText] = useState('');
   const [isAgentReplying, setIsAgentReplying] = useState(false);
   const [demoNotice, setDemoNotice] = useState<string | null>(null);
+
+  // Authentication & Guest Handoff
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [isLocalEnv, setIsLocalEnv] = useState(false);
+  const [handoffSuccess, setHandoffSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isLocal =
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        process.env.NODE_ENV === 'development' ||
+        new URLSearchParams(window.location.search).has('dev');
+      setIsLocalEnv(isLocal);
+    }
+  }, []);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessagesCountRef = useRef<number>(0);
@@ -327,6 +344,13 @@ function ConversationThreadInner() {
 
               {/* Status and Action Buttons */}
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                {customer && !customer.isGuest && !conversation.customerId?.startsWith('cust_guest_') && (
+                  <Badge variant="outline" className="text-[10px] h-6 px-2 gap-1 text-primary border-primary/30 hidden sm:inline-flex">
+                    <ShieldCheck className="h-3 w-3" />
+                    <span>Linked: {customer.name}</span>
+                  </Badge>
+                )}
+
                 {conversation.status === 'active' && (
                   <Badge variant="secondary" className="text-[11px] h-6 px-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary mr-1 animate-pulse" />
@@ -369,6 +393,46 @@ function ConversationThreadInner() {
                 </Button>
               </div>
             </div>
+
+            {/* Handoff Success Notice */}
+            {handoffSuccess && (
+              <div className="px-4 py-2 bg-primary/10 border-b border-primary/20 flex items-center justify-between text-xs text-primary font-medium shrink-0">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4" />
+                  {handoffSuccess}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setHandoffSuccess(null)}
+                  className="text-muted-foreground hover:text-foreground cursor-pointer text-[11px]"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            {/* Guest Handoff Banner */}
+            {(customer?.isGuest || conversation.customerId?.startsWith('cust_guest_') || conversation.customerEmail?.includes('guest')) && !handoffSuccess && (
+              <div className="px-4 py-2 sm:px-6 bg-muted/50 border-b border-border/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shrink-0">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal text-muted-foreground bg-background">
+                    Guest Session
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    You are chatting as a guest ({conversation.customerEmail || customer?.email}).
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => setShowAuthDialog(true)}
+                  className="h-7 text-xs gap-1.5 shrink-0 self-start sm:self-auto cursor-pointer"
+                >
+                  <Sparkles className="h-3 w-3" />
+                  <span>Save Chat & Log In</span>
+                </Button>
+              </div>
+            )}
 
             {/* Linked Order Grounding Summary Bar (Collapsible) */}
             {linkedOrder && (
@@ -606,85 +670,97 @@ function ConversationThreadInner() {
                 </Button>
               </form>
 
-              {/* Hackathon Demo Drawer Toggle */}
-              <div className="mt-2 text-center">
-                <button
-                  onClick={() => setShowDemoDrawer(!showDemoDrawer)}
-                  className="text-[11px] font-mono text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                >
-                  <Sparkles className="h-3 w-3 text-primary" />
-                  <span>
-                    {showDemoDrawer ? 'Hide Inbound Tools' : 'Inbound Email & Specialist Tools'}
-                  </span>
-                  {showDemoDrawer ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                </button>
-              </div>
-
-              {/* Inbound & Specialist Drawer */}
-              {showDemoDrawer && (
-                <div className="mt-3 p-3 rounded-xl border border-border bg-card shadow-xs text-xs space-y-3 max-w-3xl mx-auto">
-                  <div className="font-semibold text-foreground flex items-center justify-between border-b border-border pb-1.5">
-                    <span>Developer & Integration Tools</span>
-                    <Badge variant="outline" className="text-[10px]">
-                      SendGrid & Specialist Operations
-                    </Badge>
+              {/* Hackathon Demo Drawer Toggle (Environment Gated: Local Dev Only) */}
+              {isLocalEnv && (
+                <>
+                  <div className="mt-2 text-center">
+                    <button
+                      onClick={() => setShowDemoDrawer(!showDemoDrawer)}
+                      className="text-[11px] font-mono text-muted-foreground hover:text-foreground inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <Sparkles className="h-3 w-3 text-primary" />
+                      <span>
+                        {showDemoDrawer ? 'Hide Dev Tools' : 'Local Dev: Inbound Email & Specialist Tools'}
+                      </span>
+                      {showDemoDrawer ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    </button>
                   </div>
 
-                  {demoNotice && (
-                    <div className="p-2 rounded bg-muted text-foreground text-[11px] border border-border">
-                      {demoNotice}
+                  {/* Inbound & Specialist Drawer */}
+                  {showDemoDrawer && (
+                    <div className="mt-3 p-3 rounded-xl border border-border/70 bg-card/60 shadow-xs text-xs space-y-3 max-w-3xl mx-auto">
+                      <div className="font-semibold text-foreground flex items-center justify-between border-b border-border/60 pb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span>Developer Simulation Console</span>
+                          <Badge variant="outline" className="text-[9px] py-0 px-1 text-muted-foreground">
+                            Local Only
+                          </Badge>
+                        </div>
+                        <NextLink
+                          href="/merchant/escalations"
+                          className="text-[11px] text-primary hover:underline flex items-center gap-1 font-normal"
+                        >
+                          Merchant Escalations Portal →
+                        </NextLink>
+                      </div>
+
+                      {demoNotice && (
+                        <div className="p-2 rounded bg-muted text-foreground text-[11px] border border-border">
+                          {demoNotice}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {/* Email Webhook ingestion */}
+                        <div className="space-y-1.5 border border-border p-2.5 rounded-lg bg-background">
+                          <span className="font-semibold text-foreground block text-[11px]">
+                            1. Inbound Email Reply (SendGrid Ingestion)
+                          </span>
+                          <textarea
+                            rows={2}
+                            placeholder="Customer replies via email app..."
+                            value={simulatedEmailText}
+                            onChange={(e) => setSimulatedEmailText(e.target.value)}
+                            className="w-full p-2 text-xs rounded border border-border bg-background resize-none"
+                          />
+                          <Button
+                            size="sm"
+                            disabled={isSimulatingEmail || !simulatedEmailText.trim()}
+                            onClick={handleSimulateInboundEmail}
+                            className="w-full text-xs h-7 gap-1"
+                          >
+                            <Mail className="h-3 w-3" />
+                            <span>Send Inbound Email</span>
+                          </Button>
+                        </div>
+
+                        {/* Human Specialist */}
+                        <div className="space-y-1.5 border border-border p-2.5 rounded-lg bg-background">
+                          <span className="font-semibold text-foreground block text-[11px]">
+                            2. Human Specialist Response
+                          </span>
+                          <textarea
+                            rows={2}
+                            placeholder="Human agent reply text..."
+                            value={humanAgentReplyText}
+                            onChange={(e) => setHumanAgentReplyText(e.target.value)}
+                            className="w-full p-2 text-xs rounded border border-border bg-background resize-none"
+                          />
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={isAgentReplying || !humanAgentReplyText.trim()}
+                            onClick={handleHumanAgentReply}
+                            className="w-full text-xs h-7 gap-1"
+                          >
+                            <UserCheck className="h-3 w-3" />
+                            <span>Send Specialist Message</span>
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* Email Webhook ingestion */}
-                    <div className="space-y-1.5 border border-border p-2.5 rounded-lg bg-background">
-                      <span className="font-semibold text-foreground block text-[11px]">
-                        1. Inbound Email Reply (SendGrid Ingestion)
-                      </span>
-                      <textarea
-                        rows={2}
-                        placeholder="Customer replies via email app..."
-                        value={simulatedEmailText}
-                        onChange={(e) => setSimulatedEmailText(e.target.value)}
-                        className="w-full p-2 text-xs rounded border border-border bg-background resize-none"
-                      />
-                      <Button
-                        size="sm"
-                        disabled={isSimulatingEmail || !simulatedEmailText.trim()}
-                        onClick={handleSimulateInboundEmail}
-                        className="w-full text-xs h-7 gap-1"
-                      >
-                        <Mail className="h-3 w-3" />
-                        <span>Send Inbound Email</span>
-                      </Button>
-                    </div>
-
-                    {/* Human Specialist */}
-                    <div className="space-y-1.5 border border-border p-2.5 rounded-lg bg-background">
-                      <span className="font-semibold text-foreground block text-[11px]">
-                        2. Human Specialist Response
-                      </span>
-                      <textarea
-                        rows={2}
-                        placeholder="Human agent reply text..."
-                        value={humanAgentReplyText}
-                        onChange={(e) => setHumanAgentReplyText(e.target.value)}
-                        className="w-full p-2 text-xs rounded border border-border bg-background resize-none"
-                      />
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        disabled={isAgentReplying || !humanAgentReplyText.trim()}
-                        onClick={handleHumanAgentReply}
-                        className="w-full text-xs h-7 gap-1"
-                      >
-                        <UserCheck className="h-3 w-3" />
-                        <span>Send Specialist Message</span>
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                </>
               )}
             </div>
           </>
@@ -753,6 +829,16 @@ function ConversationThreadInner() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Customer Auth & Conversation Handoff Dialog */}
+      <CustomerAuthDialog
+        open={showAuthDialog}
+        onOpenChange={setShowAuthDialog}
+        handoffConversationId={conversationId}
+        onSuccess={() => {
+          window.location.href = `/chat/${conversationId}`;
+        }}
+      />
     </>
   );
 }

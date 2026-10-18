@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const merchantId = searchParams.get('merchantId') || undefined;
 
-    const conversations = await TDStore.getConversations(customer.id, merchantId);
+    const conversations = await TDStore.getConversations(customer.id, merchantId, customer.email);
     return NextResponse.json({ conversations }, { headers: CORS_HEADERS });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500, headers: CORS_HEADERS });

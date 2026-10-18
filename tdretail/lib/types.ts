@@ -33,6 +33,22 @@ export interface Customer {
   phone?: string;
   defaultAddress?: string;
   createdAt: string;
+  isGuest?: boolean;
+  passwordHash?: string;
+}
+
+export interface CustomerSessionData {
+  customer: Customer;
+  isGuest: boolean;
+  token?: string;
+}
+
+export interface CustomerAuthPayload {
+  customerId: string;
+  email: string;
+  name: string;
+  isGuest: boolean;
+  createdAt: string;
 }
 
 export interface CustomerSession {

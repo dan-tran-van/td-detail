@@ -64,16 +64,25 @@ TD Retail is an AI-powered multi-merchant customer support platform built on Nex
 ### B. Gemini Agent Service Architecture (`lib/services/geminiService.ts`)
 - **Active Model**: Uses `gemini-3.5-flash-lite` with `@google/genai` SDK.
   - *Important*: `gemini-2.5-flash` and `gemini-3.8-flash` free-tier quotas are easily exhausted (429 quota error). Keep `gemini-3.5-flash-lite` as the primary engine for high availability and reliable function calling.
-- **Function Calling & Tool Execution**:
+- **Function Calling & Tool Response Protocol**:
   - Two declared tools: `lookupOrderStatus({ orderId })` and `requestHumanEscalation({ reason })`.
   - When returning function call responses to Gemini, **always preserve the original `id`** (`fc.id`) on the `functionResponse` part, and pass the exact previous `candidate.content` containing the `thoughtSignature`.
-- **History Turn Invariant**:
-  - In `/api/conversations/[id]/messages/route.ts`, the customer message is added to `TDStore` before calling `GeminiAgentService.processMessage()`.
-  - To prevent consecutive `user` turns (`user -> user`) which Gemini API rejects with a 400 error, `processMessage()` filters out the duplicate incoming message from the history slice before appending the active turn.
+  - **Tool Role Invariant**: Tool responses in `followupContents` MUST use `role: 'tool'` (or `'function'`) with parts `[{ functionResponse: { name, response, id } }]`. Never send `role: 'user'` for function response parts.
+- **History Turn Invariant & Specialist Attribution**:
+  - The history array passed to Gemini must alternate strictly between `user` and `model` (`user -> model -> user -> model`). Consecutive turns with the same role cause the Gemini API to reject requests with HTTP 400.
+  - **System Message Filtering**: Internal audit messages (`m.sender === 'system'`, e.g., "Conversation claimed...") must be filtered out from `contents` so they never create invalid pseudo-model turns.
+  - **Consecutive Turn Merging**: Consecutive user turns or consecutive model turns are merged into a single turn separated by double newlines (`\n\n`).
+  - **Merchant Specialist Attribution (`sender: 'human_agent'`)**: Human specialist replies from `/merchant/escalations` are mapped to `role: 'model'` and explicitly prefixed with `[Human Support Specialist (${msg.senderName})]: ${text}`. The Gemini system prompt instructs the agent to treat specialist decisions as authoritative ground truth and cooperate with their actions.
+- **Dynamic Domain Grounding (Zero Hardcoded Categories)**:
+  - Both live tool responses and fallback engines (`formatDynamicOrderResponse` and `formatDynamicPolicyResponse`) are 100% data-driven.
+  - **Never hardcode merchant categories** (e.g. `if (merchant.category === 'digital_music')`). All responses dynamically format:
+    1. Verified order state: items, quantities, digital license keys, direct vault download links, tracking numbers, carrier names, delivery ETAs, and courier notes.
+    2. Dynamic support policies: dynamically quotes `merchant.supportPolicy.returns`, `refunds`, `deliveryOrDownload`, and `escalationThreshold`.
+  - Seamlessly handles newly registered storefronts onboarded via `/merchant/register` or `POST /api/merchants` with zero code modifications.
 - **Grounded Fallback Engine**:
   - If the Gemini API key is missing or encounters rate limits, `executeGroundedFallbackEngine()` handles requests locally with verified database checks.
-  - Features smart intent classification (detects refund/cancellation, escalation, order status queries, and general inquiries) so it does not repetitively output order details for non-order questions.
-  - Fallback string templates must use standard Markdown bullets (`- `) with double newlines rather than unicode bullet characters (`• `).
+  - Features smart intent classification (detects refund/cancellation, escalation, order status queries, and general inquiries) dynamically weaving merchant policies and order details.
+  - Fallback string templates must use standard Markdown bullets (`* ` or `- `) with double newlines rather than unicode bullet characters (`• `).
 
 ### C. Gmail-style Standalone Outbox (`/outbox`) & SendGrid Email Integration
 - Standalone webmail interface located at [app/outbox/page.tsx](file:///home/dan/Documents/projects/nextjs-projects/tdretail/app/outbox/page.tsx).
@@ -91,14 +100,20 @@ TD Retail is an AI-powered multi-merchant customer support platform built on Nex
 - **Verification Script**:
   - `node scripts/test-sendgrid.mjs [recipient@email.com]` verifies SendGrid domain authentication directly from `.env.local`.
 
-### D. Persona Switcher Mechanism
-- **Active Personas**: Defined in `lib/data/seedData.ts` (`cust_sarah_connor`, `cust_alex_chen`).
-- **Session API**:
-  - `GET /api/session` returns current customer and all available demo personas.
-  - `POST /api/session` updates the `td_customer_id` cookie.
-- **UI Trigger**:
-  - Accessible **Dialog Modals** in both `ModernAppShell.tsx` and `app/outbox/page.tsx`.
-  - Switching immediately writes `document.cookie`, calls `/api/session`, and performs a clean reload to sync all tickets and orders.
+### D. Customer Authentication, Guest Isolation & Seamless Conversation Handoff
+- **SSR Cookie Session Architecture**:
+  - Customer identity is managed via `lib/customerSession.ts` using the secure HTTP-only cookie `td_customer_session` (base64 JSON of `CustomerAuthPayload`: `{ customerId, email, name, isGuest }`) and legacy fallback `td_customer_id`.
+  - Bridges Next.js App Router server components (`cookies()`), API routes (`getCurrentCustomer()`), and client shells (`ModernAppShell`).
+- **Dynamic Guest Isolation**:
+  - Unauthenticated visitors receive a unique isolated guest profile (`cust_guest_xxxx`) and isolated guest email (`guest_xxxx@tdretail.guest`).
+  - Ensures shoppers in evaluation or public environments never leak active support threads or order histories to other anonymous visitors.
+- **1-Click Evaluation Personas & Custom Email Sign-In**:
+  - Endpoints: `POST /api/session/login`, `POST /api/session/logout`, `POST /api/session/claim-conversation`, `GET /api/session`.
+  - Supports 1-click persona switching (Sarah Connor, Alex Chen) and custom customer email sign-in/auto-registration.
+  - Dedicated `/login` page supporting `?returnUrl=...` and `?claimConv=...`.
+- **Seamless Conversation Handoff**:
+  - When an anonymous guest signs in or clicks **"Save Chat & Log In"**, `TDStore.claimConversation(conversationId, customer)` atomically rebinds the thread, customer email, and name, appends an audit message, and sets the customer session.
+  - **Full Window Navigation on Handoff**: `CustomerAuthDialog` reloads via `window.location.href = /chat/${handoffConversationId}` to ensure root layout (`ModernAppShell`) SSR-hydrates with the new session cookie, immediately rendering the authenticated customer profile in the active sidebar, listing their inbox conversations, highlighting the active thread, and dismissing guest prompts.
 
 ### E. External Merchant Integration & Dynamic Registration (`POST /api/merchants`)
 - **Participating External Storefronts**:

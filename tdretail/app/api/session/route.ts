@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { getCurrentCustomer } from '@/lib/session';
+import { getCustomerSession, setCustomerSession } from '@/lib/customerSession';
 import { TDStore } from '@/lib/firebase/store';
 import { SEED_CUSTOMERS } from '@/lib/data/seedData';
 import { Customer } from '@/lib/types';
@@ -11,41 +10,38 @@ export async function GET(req: NextRequest) {
   const paramName = searchParams.get('customerName');
   const paramId = searchParams.get('customerId');
 
-  const cookieStore = await cookies();
-
-  // If incoming link from music-merchant provides visitor details, provision/resolve that customer immediately!
+  // If incoming link from storefront provides visitor details, provision/resolve that customer session
   if (paramEmail) {
     const email = paramEmail.trim().toLowerCase();
     let customer = await TDStore.getCustomerByEmail(email);
+    const isGuest = !SEED_CUSTOMERS.some((c) => c.email.toLowerCase() === email);
+
     if (!customer) {
-      const generatedId = paramId || `cust_${paramEmail.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`;
+      const generatedId = paramId || `cust_${email.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`;
       customer = await TDStore.upsertCustomer({
         id: generatedId,
         name: paramName?.trim() || email.split('@')[0],
         email,
+        isGuest,
         createdAt: new Date().toISOString(),
       });
     }
 
     if (customer) {
-      cookieStore.set('td_customer_id', customer.id, {
-        path: '/',
-        httpOnly: false,
-        maxAge: 60 * 60 * 24 * 7,
-      });
-
+      await setCustomerSession(customer, isGuest);
       return NextResponse.json({
         customer,
+        isGuest,
         availableCustomers: SEED_CUSTOMERS,
       });
     }
   }
 
-  const customer = await getCurrentCustomer();
-  const allCustomers = SEED_CUSTOMERS;
+  const session = await getCustomerSession();
   return NextResponse.json({
-    customer,
-    availableCustomers: allCustomers,
+    customer: session.customer,
+    isGuest: session.isGuest,
+    availableCustomers: SEED_CUSTOMERS,
   });
 }
 
@@ -65,6 +61,7 @@ export async function POST(req: NextRequest) {
           id,
           name: (body.customerName || body.name)?.trim() || email.split('@')[0],
           email,
+          isGuest: false,
           createdAt: new Date().toISOString(),
         });
       }
@@ -74,14 +71,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
     }
 
-    const cookieStore = await cookies();
-    cookieStore.set('td_customer_id', customer.id, {
-      path: '/',
-      httpOnly: false,
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
+    const isGuest = Boolean(body.isGuest ?? (customer.isGuest || customer.id.startsWith('cust_guest_')));
+    await setCustomerSession(customer, isGuest);
 
-    return NextResponse.json({ success: true, customer });
+    return NextResponse.json({ success: true, customer, isGuest });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to switch customer session' }, { status: 500 });
   }
