@@ -110,6 +110,7 @@ TD Retail is an AI-powered multi-merchant customer support platform built on Nex
 - **REST Endpoints for Participating Merchants**:
   - `POST /api/merchants`: Dynamically registers new merchants with custom support policies (return windows, warranties, escalation thresholds) and brand styling without modifying seed files.
   - `POST /api/orders`: Ingests and stores orders placed externally. **Strictly validates that `merchantId` is registered**, rejecting unknown merchants.
+  - `PATCH /api/orders/[id]` & `PATCH /api/orders`: Allows merchants to update order status, tracking info, courier notes, and digital item license keys. **Strictly enforces merchant ownership** (rejecting cross-merchant updates with `403 Forbidden`).
   - `POST /api/conversations`: Ingests customer support inquiries started externally from storefront support drawers. **Strictly validates that `merchantId` is registered**, rejecting unknown merchants.
   - `POST /api/conversations/[id]/messages`: Ingests customer follow-up chat messages and returns grounded Gemini AI responses.
 

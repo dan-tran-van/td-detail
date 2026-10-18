@@ -197,6 +197,8 @@ gcloud run deploy tdretail \
 | `GET` | `/api/merchants/[id]` | Get merchant support policy and config |
 | `GET` | `/api/orders` | Query customer orders scoped by merchant |
 | `POST` | `/api/orders` | Create simulated purchase from storefront |
+| `GET` | `/api/orders/[id]` | Fetch single order by internal ID or public orderId |
+| `PATCH` | `/api/orders/[id]` | Update order status, tracking, courier notes & digital keys |
 | `GET` | `/api/conversations` | Get consolidated customer inbox threads |
 | `POST` | `/api/conversations` | Open new support inquiry with merchant & order grounding |
 | `GET` | `/api/conversations/[id]` | Get conversation details, linked order, and messages |

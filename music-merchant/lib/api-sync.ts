@@ -53,6 +53,38 @@ export async function syncOrderToTDRetail(order: Order): Promise<{ success: bool
 }
 
 /**
+ * Update an existing order status or fulfillment details on the TD Retail platform.
+ */
+export async function updateOrderOnTDRetail(
+  orderId: string,
+  updates: Partial<Order>
+): Promise<{ success: boolean; order?: Order; error?: string }> {
+  try {
+    const apiBase = getTDRetailApiBase();
+    const res = await fetch(`${apiBase}/orders/${encodeURIComponent(orderId)}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...updates,
+        merchantId: getMerchantId(),
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: data.error || `HTTP ${res.status}` };
+    }
+
+    return { success: true, order: data.order };
+  } catch (err: any) {
+    console.warn('[APISync] Could not update order on TD Retail platform:', err?.message || err);
+    return { success: false, error: err?.message || 'Network error' };
+  }
+}
+
+/**
  * Initialize a support conversation on the TD Retail platform.
  */
 export async function createSupportSession(params: {

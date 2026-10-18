@@ -142,10 +142,93 @@ export async function POST(req: NextRequest) {
       status: 500,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-merchant-id',
       },
     });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const orderId = body.orderId || body.id;
+
+    if (!orderId) {
+      return NextResponse.json(
+        { error: 'orderId is required in request body.' },
+        { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+
+    const merchantId = body.merchantId || req.headers.get('x-merchant-id');
+    if (!merchantId) {
+      return NextResponse.json(
+        { error: 'merchantId is required to update an order.' },
+        { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+
+    const merchant = await TDStore.getMerchantById(merchantId);
+    if (!merchant) {
+      return NextResponse.json(
+        { error: `Merchant "${merchantId}" is not registered on TD Retail.` },
+        { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+
+    const existingOrder = await TDStore.getOrderById(orderId);
+    if (!existingOrder) {
+      return NextResponse.json(
+        { error: `Order "${orderId}" not found.` },
+        { status: 404, headers: { 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+
+    // Cross-merchant boundary check
+    if (existingOrder.merchantId !== merchantId) {
+      return NextResponse.json(
+        {
+          error: `Security Alert: Merchant "${merchantId}" is not authorized to modify order "${orderId}" belonging to "${existingOrder.merchantId}".`,
+        },
+        { status: 403, headers: { 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+
+    const validStatuses = ['processing', 'out_for_delivery', 'delivered', 'cancelled', 'refunded'];
+    if (body.orderStatus && !validStatuses.includes(body.orderStatus)) {
+      return NextResponse.json(
+        {
+          error: `Invalid orderStatus "${body.orderStatus}". Allowed: ${validStatuses.join(', ')}.`,
+        },
+        { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+
+    const updatedOrder = await TDStore.updateOrder(existingOrder.orderId, body);
+    if (!updatedOrder) {
+      return NextResponse.json(
+        { error: `Failed to update order "${orderId}".` },
+        { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+
+    return NextResponse.json(
+      { success: true, order: updatedOrder },
+      {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-merchant-id',
+        },
+      }
+    );
+  } catch (error) {
+    console.error('Error in PATCH /api/orders:', error);
+    return NextResponse.json(
+      { error: 'Failed to update order' },
+      { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
+    );
   }
 }
 
@@ -154,8 +237,8 @@ export async function OPTIONS() {
     status: 204,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-merchant-id',
     },
   });
 }
