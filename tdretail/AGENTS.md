@@ -75,13 +75,21 @@ TD Retail is an AI-powered multi-merchant customer support platform built on Nex
   - Features smart intent classification (detects refund/cancellation, escalation, order status queries, and general inquiries) so it does not repetitively output order details for non-order questions.
   - Fallback string templates must use standard Markdown bullets (`- `) with double newlines rather than unicode bullet characters (`• `).
 
-### C. Gmail-style Standalone Outbox (`/outbox`)
+### C. Gmail-style Standalone Outbox (`/outbox`) & SendGrid Email Integration
 - Standalone webmail interface located at [app/outbox/page.tsx](file:///home/dan/Documents/projects/nextjs-projects/tdretail/app/outbox/page.tsx).
 - Features Gmail-like layout: top search bar, mail folder sidebar (Sent, All Mail, Starred), email inspection panel, SendGrid reply webhook simulator, and quick switcher to return to Chat Inbox (`/inbox`).
 - Standalone persona switcher button in the top right.
 - `EmailService` (`lib/services/emailService.ts`):
-  - Checks if `SENDGRID_API_KEY` is configured and not the default placeholder (`your_sendgrid_api_key`).
-  - If unconfigured, instantly routes emails to the local outbox without network timeouts.
+  - Checks if `SENDGRID_API_KEY` is configured (`SG.xxx`).
+  - Dispatches production emails with custom domain sender (`SENDGRID_FROM_EMAIL=support@yourdomain.com`).
+  - Sets `Reply-To` to inbound parse address (`reply+{conversationId}@inbound.yourdomain.com`).
+  - If unconfigured, falls back gracefully to logging to `/outbox` without failing requests.
+- **Inbound Webhook (`POST /api/webhooks/sendgrid`)**:
+  - Ingests customer email replies from SendGrid Inbound Parse (`multipart/form-data` or JSON).
+  - Validates customer email against conversation security rules.
+  - Appends reply to the thread, triggers Gemini Agent, and automatically emails the AI response back to the customer.
+- **Verification Script**:
+  - `node scripts/test-sendgrid.mjs [recipient@email.com]` verifies SendGrid domain authentication directly from `.env.local`.
 
 ### D. Persona Switcher Mechanism
 - **Active Personas**: Defined in `lib/data/seedData.ts` (`cust_sarah_connor`, `cust_alex_chen`).
