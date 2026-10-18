@@ -325,6 +325,71 @@ export class TDStore {
     return order;
   }
 
+  static async updateOrder(orderId: string, updates: Partial<Order>): Promise<Order | null> {
+    const existing = await this.getOrderById(orderId);
+    if (!existing) return null;
+
+    // Smart merge items if provided
+    let mergedItems = existing.items;
+    if (Array.isArray(updates.items)) {
+      mergedItems = existing.items.map((existingItem) => {
+        const patchItem = updates.items!.find(
+          (pi) => (pi.id && pi.id === existingItem.id) || (pi.title && pi.title === existingItem.title)
+        );
+        if (patchItem) {
+          return {
+            ...existingItem,
+            ...patchItem,
+            title: patchItem.title || existingItem.title,
+            quantity: patchItem.quantity ?? existingItem.quantity,
+            unitPrice: patchItem.unitPrice ?? existingItem.unitPrice,
+            licenseKey: patchItem.licenseKey ?? existingItem.licenseKey,
+            downloadUrl: patchItem.downloadUrl ?? existingItem.downloadUrl,
+          };
+        }
+        return existingItem;
+      });
+
+      // Append any new items in patch that didn't exist previously
+      for (const newItem of updates.items) {
+        const exists = mergedItems.some(
+          (mi) => (newItem.id && mi.id === newItem.id) || (newItem.title && mi.title === newItem.title)
+        );
+        if (!exists) {
+          mergedItems.push(newItem);
+        }
+      }
+    }
+
+    const updated: Order = {
+      ...existing,
+      ...updates,
+      items: mergedItems,
+      // Identity safeguards
+      id: existing.id,
+      orderId: existing.orderId,
+      merchantId: existing.merchantId,
+      customerId: existing.customerId,
+      customerEmail: existing.customerEmail,
+      createdAt: existing.createdAt,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const firestore = await this.getFirestoreClient();
+    if (firestore) {
+      try {
+        await firestore.collection('orders').doc(updated.orderId).set(updated, { merge: true });
+      } catch (e) {
+        console.warn(`[Store] Firestore update error for order ${updated.orderId}:`, e);
+      }
+    }
+
+    const state = loadState();
+    state.orders[updated.orderId] = updated;
+    saveState();
+    return updated;
+  }
+
   // --- Conversations ---
   static async getConversations(customerId?: string, merchantId?: string): Promise<Conversation[]> {
     const firestore = await this.getFirestoreClient();

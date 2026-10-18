@@ -42,17 +42,21 @@ All integration between storefronts and `tdretail` is purely HTTP REST with CORS
    - Stores new orders under visitor's email and ID.
    - **Enforces registered `merchantId`**: Rejects requests from unregistered merchants with `400 Bad Request`.
    - Derives category-appropriate defaults dynamically from `merchant.category`.
-3. **Support Conversation Initialization (`POST /api/conversations`)**:
+3. **Order Status & Fulfillment Updates (`PATCH /api/orders/[id]` & `PATCH /api/orders`)**:
+   - Updates order status (`processing`, `out_for_delivery`, `delivered`, `cancelled`, `refunded`), tracking numbers, courier notes, and digital items (`licenseKey`, `downloadUrl`).
+   - **Enforces cross-merchant boundary**: Rejects requests attempting to modify orders belonging to another merchant with `403 Forbidden`.
+   - Smart-merges digital item license keys and download URLs without overwriting pricing or titles.
+4. **Support Conversation Initialization (`POST /api/conversations`)**:
    - Creates a conversation thread scoped to `merchantId` and visitor credentials.
    - **Enforces registered `merchantId`**: Rejects requests from unregistered merchants with `400 Bad Request`.
    - Triggers the Gemini Agent for the initial message and replies immediately.
-4. **Subsequent Messages (`POST /api/conversations/[id]/messages`)**:
+5. **Subsequent Messages (`POST /api/conversations/[id]/messages`)**:
    - Appends user message and dispatches grounded Gemini response.
    - Validates ownership against `conversation.customerId` and `conversation.customerEmail` to ensure visitor messages are never rejected with 403 Access Denied.
-5. **Outbox Notification (`POST /api/outbox`)**:
+6. **Outbox Notification (`POST /api/outbox`)**:
    - Outbound support emails are routed directly to the visitor's email (`guest_xxxx@soundwave.store`), not the fallback persona session.
    - When SendGrid is configured (`SENDGRID_API_KEY`), emails are delivered via custom domain (`SENDGRID_FROM_EMAIL=support@yourdomain.com`) with reply-to routing (`reply+{conversationId}@inbound.yourdomain.com`).
-6. **SendGrid Inbound Parse Webhook (`POST /api/webhooks/sendgrid`)**:
+7. **SendGrid Inbound Parse Webhook (`POST /api/webhooks/sendgrid`)**:
    - Ingests inbound email replies received by SendGrid Inbound Parse (`inbound.yourdomain.com`).
    - Appends the message to the active conversation, triggers the Gemini Agent, and sends the AI response back to the customer via email.
 

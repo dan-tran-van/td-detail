@@ -142,6 +142,11 @@ Visit:
 - Direct reply routing (`reply+{conversationId}@inbound.yourdomain.com`) enables shoppers to reply directly from their personal email client.
 - Inbound Parse webhook (`POST /api/webhooks/sendgrid`) ingests replies, appends them to the conversation thread, and triggers automated Gemini responses.
 
+### 5. Multi-Merchant Order Lifecycle & Real-Time Fulfillment Updates
+- Merchants update order status (`processing`, `out_for_delivery`, `delivered`, `cancelled`, `refunded`), tracking numbers, courier notes, and digital license keys via `PATCH /api/orders/[id]`.
+- Strict multi-merchant boundary protection: merchants can only modify orders assigned to their verified `merchantId`.
+- Gemini AI reflects status transitions and digital license keys in real time when customers inquire.
+
 ---
 
 ## 🚢 Cloud Run Deployment Commands
