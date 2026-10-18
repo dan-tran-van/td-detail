@@ -38,3 +38,32 @@ export function resolveStorefrontUrl(type: 'music' | 'technology'): string {
 
   return '#';
 }
+
+export function resolveMerchantStorefrontUrl(merchant?: { id?: string; storefrontUrl?: string; category?: string } | null): string {
+  if (!merchant) return '#';
+  const id = merchant.id || '';
+  if (id === 'merchant_music' || id === 'merchant_a' || merchant.category === 'digital_music') {
+    return resolveStorefrontUrl('music');
+  }
+  if (id === 'merchant_b' || id === 'merchant_tech' || merchant.category === 'tech_accessories') {
+    return resolveStorefrontUrl('technology');
+  }
+  if (merchant.storefrontUrl && !merchant.storefrontUrl.startsWith('/storefront/')) {
+    return merchant.storefrontUrl;
+  }
+  return '#';
+}
+
+export const DEMO_MERCHANT_IDS = [
+  'merchant_music',
+  'merchant_a',
+  'merchant_b',
+  'merchant_tech',
+  'merchant_grocery',
+];
+
+export function isDemoMerchant(id?: string | null): boolean {
+  if (!id) return false;
+  const normalized = id.toLowerCase().trim();
+  return DEMO_MERCHANT_IDS.includes(normalized);
+}

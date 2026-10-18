@@ -76,73 +76,82 @@ export function Navbar() {
                 <NavigationMenuContent className="p-3 w-80 bg-popover/95 backdrop-blur-md border border-border rounded-2xl shadow-xl">
                   <div className="space-y-2">
                     <p className="text-[11px] font-semibold text-muted-foreground uppercase px-2 tracking-wider">
-                      Connected Storefronts
+                      Live Merchant Storefronts
                     </p>
-                    <NavigationMenuLink
-                      render={<NextLink href="/chat/conv_music_01" />}
-                      className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-muted transition-colors cursor-pointer"
+                    <a
+                      href={resolveStorefrontUrl('music')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-muted transition-colors cursor-pointer group"
                     >
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+                      <div className="h-8 w-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
                         <Disc className="h-4 w-4" />
                       </div>
-                      <div>
-                        <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                          SoundWave Digital
-                          <Badge variant="outline" className="text-[9px] py-0 px-1">
-                            Port 3001
-                          </Badge>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold text-foreground flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            SoundWave Digital
+                            <Badge variant="outline" className="text-[9px] py-0 px-1 text-indigo-500 border-indigo-500/30">
+                              Port 3001
+                            </Badge>
+                          </span>
+                          <ExternalLink className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
                         </div>
                         <p className="text-[11px] text-muted-foreground leading-tight">
                           Lossless masters, vinyl stems & licenses
                         </p>
                       </div>
-                    </NavigationMenuLink>
+                    </a>
 
-                    <NavigationMenuLink
-                      render={<NextLink href="/chat/conv_grocery_01" />}
-                      className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-muted transition-colors cursor-pointer"
+                    <a
+                      href={resolveStorefrontUrl('technology')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-muted transition-colors cursor-pointer group"
                     >
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
-                        <ShoppingBag className="h-4 w-4" />
+                      <div className="h-8 w-8 rounded-lg bg-cyan-500/10 text-cyan-500 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                        <Zap className="h-4 w-4" />
                       </div>
-                      <div>
-                        <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                          FreshCart Direct
-                          <Badge variant="outline" className="text-[9px] py-0 px-1">
-                            Grocery
-                          </Badge>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold text-foreground flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            Volt Nest
+                            <Badge variant="outline" className="text-[9px] py-0 px-1 text-cyan-500 border-cyan-500/30">
+                              Port 3002
+                            </Badge>
+                          </span>
+                          <ExternalLink className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
                         </div>
                         <p className="text-[11px] text-muted-foreground leading-tight">
-                          Cold-chain logistics & automated refunds
+                          GaN fast chargers, ANC earbuds & smart gear
                         </p>
                       </div>
-                    </NavigationMenuLink>
+                    </a>
 
-                    <div className="pt-2 border-t border-border flex flex-col gap-1.5 px-1">
-                      <a
-                        href={resolveStorefrontUrl('music')}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[11px] text-primary hover:underline flex items-center justify-between font-medium"
+                    <div className="pt-2 border-t border-border space-y-1">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase px-2 tracking-wider">
+                        AI Agent Chat Demos
+                      </p>
+                      <NavigationMenuLink
+                        render={<NextLink href="/chat/conv_music_01" />}
+                        className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-muted text-xs text-foreground cursor-pointer"
                       >
-                        <span className="flex items-center gap-1.5">
-                          <Disc className="h-3 w-3" />
-                          SoundWave Storefront
+                        <span className="flex items-center gap-2">
+                          <Disc className="h-3 w-3 text-indigo-500" />
+                          <span>SoundWave License Support</span>
                         </span>
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                      <a
-                        href={resolveStorefrontUrl('technology')}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[11px] text-primary hover:underline flex items-center justify-between font-medium"
+                        <span className="text-[10px] text-muted-foreground">Demo &rarr;</span>
+                      </NavigationMenuLink>
+                      <NavigationMenuLink
+                        render={<NextLink href="/chat/conv_grocery_01" />}
+                        className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-muted text-xs text-foreground cursor-pointer"
                       >
-                        <span className="flex items-center gap-1.5">
-                          <Zap className="h-3 w-3" />
-                          Volt Nest Storefront
+                        <span className="flex items-center gap-2">
+                          <ShoppingBag className="h-3 w-3 text-emerald-500" />
+                          <span>FreshCart Grocery Dispatch</span>
                         </span>
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
+                        <span className="text-[10px] text-muted-foreground">Demo &rarr;</span>
+                      </NavigationMenuLink>
                     </div>
                   </div>
                 </NavigationMenuContent>
@@ -175,6 +184,21 @@ export function Navbar() {
                 >
                   <Mail className="h-3.5 w-3.5 mr-1 inline" />
                   <span>Outbox</span>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+
+              {/* Merchant Portal Link */}
+              <NavigationMenuItem>
+                <NavigationMenuLink
+                  render={<NextLink href="/merchant" />}
+                  className={`h-8 px-3 rounded-full text-xs font-medium cursor-pointer transition-colors ${
+                    pathname?.startsWith('/merchant')
+                      ? 'bg-muted text-foreground font-semibold'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                  }`}
+                >
+                  <Store className="h-3.5 w-3.5 mr-1 inline text-primary" />
+                  <span>Merchant Portal</span>
                 </NavigationMenuLink>
               </NavigationMenuItem>
 
@@ -282,6 +306,15 @@ export function Navbar() {
                     >
                       <Mail className="h-4 w-4 text-primary" />
                       <span>Email Outbox & Webhooks</span>
+                    </NextLink>
+
+                    <NextLink
+                      href="/merchant"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-muted transition-colors text-xs font-medium text-foreground"
+                    >
+                      <Store className="h-4 w-4 text-primary" />
+                      <span>Merchant Portal (Staff & Admin)</span>
                     </NextLink>
 
                     <NextLink

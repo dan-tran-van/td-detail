@@ -169,6 +169,27 @@ Follow these steps to experience all capabilities:
 
 ---
 
+## 🧑‍💻 Developer Guide: Architecture & Extending TD Retail
+
+### A. Authentication & Session Architecture
+TD Retail maintains strict separation between consumer shoppers and merchant staff:
+- **Shopper Persona Sessions (`td_customer_id` cookie)**: Controls customer identity in `/inbox` and `/chat/[id]`. Switchable via the persona dialog or `POST /api/session`.
+- **Merchant Staff Sessions (`td_merchant_session` HTTP-only cookie)**: Scoped to `/merchant/*`. Passwords hashed with Node's `crypto.pbkdf2Sync`.
+- **Why Cookie Sessions Over Client Firebase Auth?**
+  1. **Instant 1-Click Evaluation**: Judges switch between SoundWave Digital and Volt Nest with zero popups or typing.
+  2. **SSR Native**: Next.js App Router reads `cookies()` synchronously on the initial HTTP request, eliminating client auth hydration flicker.
+  3. **Zero Client SDK Footprint**: Avoids pulling the heavy `@firebase/auth` client bundle into the browser.
+  4. **Zero Cloud Run Domain Whitelist Headaches**: Works out-of-the-box on `localhost`, Cloud Run revision URLs (`asia-southeast1.run.app`), or custom domains without Firebase Console whitelist updates.
+
+### B. Demo Store Protection & Testing Settings
+- **Protected Seed Merchants**: `merchant_music`, `merchant_a`, `merchant_b`, `merchant_tech`, `merchant_grocery` are read-only (`403 Forbidden` on `PATCH /api/merchant/settings`) to ensure a pristine evaluation environment.
+- **Testing Setting Edits**: To test updating store details, colors, or ground-truth Gemini policies, register a new custom merchant via `/merchant/register` or `POST /api/merchants`, then log in and edit freely (`200 OK`).
+
+### C. Multi-Process Cache Synchronization
+- When running with the local file mock store (`.data/db.json`), `TDStore` verifies `fs.statSync(DATA_FILE).mtimeMs` before fulfilling requests to guarantee that mutations made by one Next.js worker are immediately reflected in all parallel server processes.
+
+---
+
 ## 🚢 Production Deployment
 
 ### Option A: Google Cloud Run (Recommended for Gemini workloads)
@@ -207,8 +228,16 @@ gcloud run deploy tdretail \
 | `POST` | `/api/conversations/[id]/agent-reply` | Reply and resolve as human support specialist |
 | `POST` | `/api/webhooks/sendgrid` | SendGrid Inbound Parse Webhook endpoint |
 | `POST` | `/api/webhooks/sendgrid/simulate` | Helper to simulate incoming customer email reply |
-| `GET` | `/api/outbox` | View outgoing support emails for development |
 | `POST` | `/api/seed` | Reset and reseed Firestore with initial demo data |
+| `GET` | `/api/merchant/session` | Get active merchant staff session |
+| `POST` | `/api/merchant/session` | Log in as merchant staff or 1-click demo switcher |
+| `DELETE` | `/api/merchant/session` | Log out merchant staff session |
+| `GET` | `/api/merchant/settings` | Get store details and ground-truth AI support policies |
+| `PATCH` | `/api/merchant/settings` | Update store details & AI policies (protected for demo stores) |
+| `GET` | `/api/merchant/escalations` | List Gemini-escalated tickets for active merchant |
+| `POST` | `/api/merchant/escalations/[id]/reply` | Reply as human specialist, dispatch email & resolve ticket |
+| `GET` | `/api/merchant/orders` | List customer orders scoped to active merchant |
+| `GET` | `/api/merchant/outbox` | Audit sent emails by Gemini for active merchant |
 
 ---
 

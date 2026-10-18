@@ -33,6 +33,15 @@ function ShellContent({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // The Merchant Portal has its own dedicated portal shell and navigation
+  if (pathname?.startsWith('/merchant')) {
+    return (
+      <main className="min-h-screen w-full flex flex-col bg-background text-foreground">
+        {children}
+      </main>
+    );
+  }
+
   return (
     <>
       <Navbar />

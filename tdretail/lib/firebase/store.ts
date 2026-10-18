@@ -7,6 +7,7 @@ import {
   Conversation,
   Message,
   OutboxEmail,
+  MerchantUser,
 } from '@/lib/types';
 import {
   SEED_CUSTOMERS,
@@ -24,6 +25,7 @@ interface StorageSchema {
   conversations: Record<string, Conversation>;
   messages: Record<string, Message[]>; // keyed by conversationId
   outbox: OutboxEmail[];
+  merchantUsers: Record<string, MerchantUser>; // keyed by email.toLowerCase()
 }
 
 // In-memory cache + file persistence fallback
@@ -39,6 +41,29 @@ function ensureDataDir() {
       // Ignore if cannot write to filesystem (e.g. read-only env)
     }
   }
+}
+
+function getDefaultMerchantUsers(): MerchantUser[] {
+  return [
+    {
+      id: 'usr_soundwave_admin',
+      email: 'admin@soundwave.store',
+      name: 'SoundWave Store Manager',
+      merchantId: 'merchant_music',
+      merchantName: 'SoundWave Digital',
+      role: 'owner',
+      createdAt: '2026-03-01T00:00:00Z',
+    },
+    {
+      id: 'usr_voltnest_admin',
+      email: 'admin@voltnest.store',
+      name: 'Volt Nest Store Manager',
+      merchantId: 'merchant_b',
+      merchantName: 'Volt Nest',
+      role: 'owner',
+      createdAt: '2026-03-01T00:00:00Z',
+    },
+  ];
 }
 
 function getDefaultState(): StorageSchema {
@@ -67,6 +92,11 @@ function getDefaultState(): StorageSchema {
     messages[convId] = [...msgs];
   }
 
+  const merchantUsers: Record<string, MerchantUser> = {};
+  for (const u of getDefaultMerchantUsers()) {
+    merchantUsers[u.email.toLowerCase()] = u;
+  }
+
   return {
     merchants,
     customers,
@@ -74,28 +104,52 @@ function getDefaultState(): StorageSchema {
     conversations,
     messages,
     outbox: [],
+    merchantUsers,
   };
 }
 
-function loadState(): StorageSchema {
-  if (memoryState) return memoryState;
+let lastMtime = 0;
 
+function loadState(): StorageSchema {
   ensureDataDir();
   if (fs.existsSync(DATA_FILE)) {
     try {
+      const stat = fs.statSync(DATA_FILE);
+      if (memoryState && stat.mtimeMs === lastMtime) {
+        return memoryState;
+      }
       const data = fs.readFileSync(DATA_FILE, 'utf-8');
       memoryState = JSON.parse(data) as StorageSchema;
+      lastMtime = stat.mtimeMs;
+
       // Ensure any newly added seed merchants (e.g. merchant_b) are present
       for (const m of SEED_MERCHANTS) {
         if (!memoryState.merchants[m.id]) {
           memoryState.merchants[m.id] = m;
         }
       }
+      // Ensure merchantUsers is present
+      if (!memoryState.merchantUsers) {
+        memoryState.merchantUsers = {};
+        for (const u of getDefaultMerchantUsers()) {
+          memoryState.merchantUsers[u.email.toLowerCase()] = u;
+        }
+      } else {
+        if (memoryState.merchantUsers['admin@soundwave.store']) {
+          memoryState.merchantUsers['admin@soundwave.store'].merchantId = 'merchant_music';
+        }
+      }
+      // Ensure alias for merchant_a -> merchant_music
+      if (memoryState.merchants['merchant_music'] && !memoryState.merchants['merchant_a']) {
+        memoryState.merchants['merchant_a'] = memoryState.merchants['merchant_music'];
+      }
       return memoryState;
     } catch (err) {
       console.warn('[Store] Failed to read db.json, generating default seed state:', err);
     }
   }
+
+  if (memoryState) return memoryState;
 
   memoryState = getDefaultState();
   saveState();
@@ -107,6 +161,9 @@ function saveState() {
   try {
     ensureDataDir();
     fs.writeFileSync(DATA_FILE, JSON.stringify(memoryState, null, 2), 'utf-8');
+    try {
+      lastMtime = fs.statSync(DATA_FILE).mtimeMs;
+    } catch {}
   } catch (err) {
     console.warn('[Store] Could not persist state to file, retaining in-memory:', err);
   }
@@ -143,9 +200,12 @@ export class TDStore {
           batch.set(firestore.collection('conversations').doc(convId).collection('messages').doc(msg.id), msg, { merge: !force });
         }
       }
+      for (const u of getDefaultMerchantUsers()) {
+        batch.set(firestore.collection('merchant_users').doc(u.email.toLowerCase()), u, { merge: !force });
+      }
 
       await batch.commit();
-      console.log('[Store] Seeded Firestore with initial merchants, customers, orders, and conversations.');
+      console.log('[Store] Seeded Firestore with initial merchants, customers, orders, conversations, and merchant staff.');
     }
 
     // Always reset/update local cache as well
@@ -191,6 +251,9 @@ export class TDStore {
       }
     }
     const state = loadState();
+    if (id === 'merchant_a') {
+      return state.merchants['merchant_music'] || state.merchants['merchant_a'] || null;
+    }
     return state.merchants[id] || null;
   }
 
@@ -579,4 +642,71 @@ export class TDStore {
     const state = loadState();
     return state.outbox || [];
   }
+
+  // --- Merchant Users & Auth ---
+  static async getMerchantUserByEmail(email: string): Promise<MerchantUser | null> {
+    const normalized = email.trim().toLowerCase();
+    const firestore = await this.getFirestoreClient();
+    if (firestore) {
+      try {
+        const doc = await firestore.collection('merchant_users').doc(normalized).get();
+        if (doc.exists) return doc.data() as MerchantUser;
+      } catch (e) {
+        console.warn(`[Store] Firestore error fetching merchant user ${normalized}:`, e);
+      }
+    }
+    const state = loadState();
+    return state.merchantUsers?.[normalized] || null;
+  }
+
+  static async getMerchantUsers(): Promise<MerchantUser[]> {
+    const firestore = await this.getFirestoreClient();
+    if (firestore) {
+      try {
+        const snap = await firestore.collection('merchant_users').get();
+        if (!snap.empty) {
+          return snap.docs.map((d) => d.data() as MerchantUser);
+        }
+      } catch (e) {
+        console.warn('[Store] Firestore error fetching merchant users:', e);
+      }
+    }
+    const state = loadState();
+    return Object.values(state.merchantUsers || {});
+  }
+
+  static async createMerchantUser(user: MerchantUser): Promise<MerchantUser> {
+    const normalized = user.email.trim().toLowerCase();
+    const firestore = await this.getFirestoreClient();
+    if (firestore) {
+      try {
+        await firestore.collection('merchant_users').doc(normalized).set(user, { merge: true });
+      } catch (e) {
+        console.warn(`[Store] Firestore error saving merchant user ${normalized}:`, e);
+      }
+    }
+    const state = loadState();
+    if (!state.merchantUsers) {
+      state.merchantUsers = {};
+    }
+    state.merchantUsers[normalized] = {
+      ...user,
+      email: normalized,
+    };
+    saveState();
+    return state.merchantUsers[normalized];
+  }
+
+  // --- Merchant Escalated Conversations ---
+  static async getEscalatedConversations(merchantId: string): Promise<Conversation[]> {
+    const all = await this.getConversations(undefined, merchantId);
+    return all.filter((conv) => conv.status === 'escalated');
+  }
+
+  // --- Merchant Outbox Emails ---
+  static async getOutboxEmailsByMerchant(merchantId: string): Promise<OutboxEmail[]> {
+    const all = await this.getOutboxEmails();
+    return all.filter((email) => email.merchantId === merchantId);
+  }
 }
+
