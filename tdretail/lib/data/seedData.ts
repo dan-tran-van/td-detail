@@ -364,7 +364,7 @@ export const SEED_MESSAGES: Record<string, Message[]> = {
       content: "Hello Sarah! Thanks for contacting SoundWave Digital support. I checked your order **#ORD-MUS-8821** via our server vault:\n\n* **Status:** Delivered & Download Ready\n* **Included Format:** FLAC 24-bit / 96kHz + Full WAV Stems Pack\n* **License Key:** `SW-8821-NEON-FLAC-L01`\n* **Direct Vault Download:** [Download SW-8821-NEON-DELUXE.zip](https://downloads.soundwave.store/vault/SW-8821-NEON-DELUXE.zip)\n\nYou have 5 active high-speed download attempts remaining on this license. Let me know if you need assistance extracting or loading the stems in your DAW!",
       metadata: {
         isAiGrounded: true,
-        modelName: 'gemini-2.5-flash',
+        modelName: 'gemini-3.5-flash-lite',
         groundedOrderId: 'ORD-MUS-8821',
         groundedOrderStatus: 'delivered',
         toolCalls: [
@@ -402,7 +402,7 @@ export const SEED_MESSAGES: Record<string, Message[]> = {
       content: "Hi Sarah! I've checked live delivery dispatch for order **#ORD-GROC-5512**:\n\n* **Status:** Out for Delivery\n* **Driver:** Marcus D. in FreshCart Express Van #09\n* **ETA:** Arriving by 2:45 PM (approx. 22 minutes away, 1.8 miles out)\n* **Cold Chain Guarantee:** Your Straus Pasture-Raised Whole Milk and Stumptown Cold Brew are sealed inside insulated thermal tote **#TC-402** with sub-zero ice packs, guaranteed to maintain refrigeration temp for up to 3 hours after drop-off.\n\nWould you like me to leave a special delivery note for Marcus, such as porch placement?",
       metadata: {
         isAiGrounded: true,
-        modelName: 'gemini-2.5-flash',
+        modelName: 'gemini-3.5-flash-lite',
         groundedOrderId: 'ORD-GROC-5512',
         groundedOrderStatus: 'out_for_delivery',
         toolCalls: [
