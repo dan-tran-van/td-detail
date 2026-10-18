@@ -13,10 +13,10 @@ This guide documents the monorepo architecture, development protocols, cross-app
 | **`technology-merchant`** | `3002` | External Merchant Storefront (Volt Nest - Merchant B) | Next.js 16 (App Router), shadcn/ui, Tailwind v4, Zod, Vitest |
 
 ### Cloud Run Deployments (Production)
-Configured via Cloud Run environment variables / deploy flags:
-- **`tdretail`**: Central resolution backend & Gemini agent (e.g. `https://<tdretail-service-url>`)
-- **`music-merchant`**: External music storefront (e.g. `https://<music-merchant-service-url>`)
-- **`technology-merchant`**: External tech accessories storefront (e.g. `https://<technology-merchant-service-url>`)
+Configured via Cloud Run environment variables / deploy flags in `asia-southeast1`:
+- **`tdretail`**: `https://tdretail-215785827581.asia-southeast1.run.app`
+- **`music-merchant`**: `https://music-merchant-215785827581.asia-southeast1.run.app`
+- **`technology-merchant`**: `https://technology-merchant-215785827581.asia-southeast1.run.app`
 
 ---
 

@@ -49,9 +49,9 @@ Services are containerized and deployed to **Google Cloud Run** in `asia-southea
 
 | Service | Role | Live URL |
 | :--- | :--- | :--- |
-| **`tdretail`** | Central Platform & Gemini AI Agent | `https://<tdretail-service-url>` |
-| **`music-merchant`** | SoundWave Digital Storefront (Merchant A) | `https://<music-merchant-service-url>` |
-| **`technology-merchant`** | Volt Nest Storefront (Merchant B) | `https://<technology-merchant-service-url>` |
+| **`tdretail`** | Central Platform & Gemini AI Agent | `https://tdretail-215785827581.asia-southeast1.run.app` |
+| **`music-merchant`** | SoundWave Digital Storefront (Merchant A) | `https://music-merchant-215785827581.asia-southeast1.run.app` |
+| **`technology-merchant`** | Volt Nest Storefront (Merchant B) | `https://technology-merchant-215785827581.asia-southeast1.run.app` |
 
 ---
 

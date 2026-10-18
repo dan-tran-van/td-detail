@@ -16,7 +16,9 @@ import {
   Menu,
   X,
   ArrowRight,
+  Zap,
 } from 'lucide-react';
+import { resolveStorefrontUrl } from '@/lib/storefrontConfig';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -115,14 +117,29 @@ export function Navbar() {
                       </div>
                     </NavigationMenuLink>
 
-                    <div className="pt-2 border-t border-border flex justify-between items-center px-1">
+                    <div className="pt-2 border-t border-border flex flex-col gap-1.5 px-1">
                       <a
-                        href={process.env.NEXT_PUBLIC_MUSIC_MERCHANT_URL || 'http://localhost:3001'}
+                        href={resolveStorefrontUrl('music')}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium"
+                        className="text-[11px] text-primary hover:underline flex items-center justify-between font-medium"
                       >
-                        Open SoundWave Storefront
+                        <span className="flex items-center gap-1.5">
+                          <Disc className="h-3 w-3" />
+                          SoundWave Storefront
+                        </span>
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                      <a
+                        href={resolveStorefrontUrl('technology')}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-primary hover:underline flex items-center justify-between font-medium"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Zap className="h-3 w-3" />
+                          Volt Nest Storefront
+                        </span>
                         <ExternalLink className="h-3 w-3" />
                       </a>
                     </div>
