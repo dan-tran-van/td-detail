@@ -49,7 +49,7 @@ SoundWave Digital (`music-merchant`) is a standalone digital music distributor b
    - `POST ${NEXT_PUBLIC_TD_RETAIL_API_URL}/api/conversations/[id]/messages` sends subsequent customer inquiries and receives grounded Gemini AI answers.
    - Requires CORS headers (`Access-Control-Allow-Origin: *`) on `tdretail` API endpoints.
 3. **Deep Linking to Active Chat**:
-   - Links in the support drawer and storefront footer deep link directly to the active chat thread: `${NEXT_PUBLIC_TD_RETAIL_API_URL}/chat/${conversation.id}` (fallback to `/chat/conv_music_01` or `/inbox`), ensuring customers and support agents land directly on the active thread rather than a generic inbox overview.
+   - Links in the support drawer and storefront footer deep link directly to the active chat thread: `${NEXT_PUBLIC_TD_RETAIL_API_URL}/chat/${conversation.id}` (fallback to `/chat/new?merchantId=merchant_music` or `/inbox`), ensuring customers and support agents land directly on their active thread rather than a generic inbox overview.
 
 ---
 

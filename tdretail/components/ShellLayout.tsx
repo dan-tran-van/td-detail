@@ -87,7 +87,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
               </h4>
               <ul className="space-y-2 text-xs text-muted-foreground">
                 <li>
-                  <NextLink href="/chat/conv_music_01" className="hover:text-foreground transition-colors flex items-center gap-1.5">
+                  <NextLink href="/chat/new?merchantId=merchant_music" className="hover:text-foreground transition-colors flex items-center gap-1.5">
                     <Sparkles className="h-3 w-3 text-primary" />
                     Interactive Chat
                   </NextLink>
@@ -144,14 +144,15 @@ function ShellContent({ children }: { children: React.ReactNode }) {
                   </a>
                 </li>
                 <li>
-                  <NextLink href="/chat/conv_music_01" className="hover:text-foreground transition-colors">
-                    Lossless Audio & Stems
+                  <NextLink href="/chat/new?merchantId=merchant_music" className="hover:text-foreground transition-colors flex items-center gap-1.5">
+                    <Disc className="h-3 w-3 text-primary" />
+                    SoundWave Licensing Chat
                   </NextLink>
                 </li>
                 <li>
-                  <NextLink href="/chat/conv_grocery_01" className="hover:text-foreground transition-colors flex items-center gap-1.5">
-                    <ShoppingBag className="h-3 w-3 text-primary" />
-                    FreshCart Direct
+                  <NextLink href="/chat/new?merchantId=merchant_b" className="hover:text-foreground transition-colors flex items-center gap-1.5">
+                    <Zap className="h-3 w-3 text-cyan-500" />
+                    Volt Nest RMA & Warranty Chat
                   </NextLink>
                 </li>
               </ul>

@@ -63,7 +63,7 @@ export default function RootLayout({
                     <span>Connected to TD Retail Platform API</span>
                     <span>•</span>
                     <a
-                      href={`${runtimeApiUrl.replace(/\/+$/, '')}/chat/conv_music_01`}
+                      href={`${runtimeApiUrl.replace(/\/+$/, '')}/chat/new?merchantId=merchant_music`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="underline hover:text-foreground transition-colors"
