@@ -201,7 +201,7 @@ export default function MerchantSettingsPage() {
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Configure your brand identity and set ground-truth policies enforced by the Gemini customer support agent.
+            Configure your brand identity and set ground-truth policies enforced by the autonomous support agent.
           </p>
         </div>
 
@@ -440,7 +440,7 @@ export default function MerchantSettingsPage() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <Bot className="h-4 w-4 text-primary" />
-                <span>Gemini AI Ground-Truth Support Policies</span>
+                <span>AI Ground-Truth Support Policies</span>
               </CardTitle>
               {isProtected && (
                 <span className="text-[11px] text-muted-foreground flex items-center gap-1">
@@ -449,7 +449,7 @@ export default function MerchantSettingsPage() {
               )}
             </div>
             <CardDescription className="text-xs text-muted-foreground">
-              These exact policy clauses are directly injected into the Gemini 3.5 system prompt to ground all customer conversations.
+              These exact policy clauses are directly injected into the system prompt to ground all customer conversations.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pt-1">
@@ -525,7 +525,7 @@ export default function MerchantSettingsPage() {
                     <Sparkles className="h-3.5 w-3.5 text-primary" />
                   </div>
                   <span className="text-[11px] leading-tight">
-                    Gemini resolves instantly; escalates complex cases to human inbox.
+                    Resolves inquiries instantly; escalates complex cases to human inbox.
                   </span>
                 </label>
 

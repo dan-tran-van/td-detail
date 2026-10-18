@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   RefreshCw,
   X,
+  Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -163,7 +164,7 @@ export default function ConsolidatedInboxPage() {
                 </Badge>
               </div>
               <p className="text-xs sm:text-sm text-muted-foreground">
-                All merchant conversations in one unified inbox with Gemini AI resolution and order grounding.
+                All merchant conversations in one unified inbox with autonomous resolution and order grounding.
               </p>
             </div>
 
@@ -350,7 +351,7 @@ export default function ConsolidatedInboxPage() {
                 <MessageSquare className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
                 <h3 className="text-base font-semibold text-foreground">No conversations yet</h3>
                 <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                  You haven't started any support inquiries yet. Select a store from the sidebar or start a new chat with Gemini AI.
+                  You haven't started any support inquiries yet. Select a store from the sidebar or start a new chat with an assistant.
                 </p>
                 <div className="mt-4">
                   <Button
@@ -391,8 +392,12 @@ export default function ConsolidatedInboxPage() {
                       <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div className="flex items-start gap-3.5 min-w-0 flex-1">
                           <div className="p-2.5 rounded-xl bg-muted text-foreground shrink-0 mt-0.5 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                            {isMusic ? (
+                            {conv.merchantId === 'merchant_music' ? (
                               <Disc className="h-4 w-4" />
+                            ) : conv.merchantId === 'merchant_b' ? (
+                              <Zap className="h-4 w-4" />
+                            ) : conv.merchantId === 'merchant_platform' ? (
+                              <Sparkles className="h-4 w-4" />
                             ) : (
                               <ShoppingBag className="h-4 w-4" />
                             )}
@@ -439,7 +444,7 @@ export default function ConsolidatedInboxPage() {
                             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
                               <span className="font-medium text-foreground/80">
                                 {conv.lastMessageSender === 'ai'
-                                  ? 'Gemini: '
+                                  ? 'Support Assistant: '
                                   : conv.lastMessageSender === 'human_agent'
                                   ? 'Human Specialist: '
                                   : 'You: '}
@@ -493,7 +498,7 @@ export default function ConsolidatedInboxPage() {
               <span>Select Store for Support</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Choose a merchant to start a new Gemini-grounded customer support inquiry.
+              Choose a merchant to start a new verified customer support inquiry.
             </DialogDescription>
           </DialogHeader>
 

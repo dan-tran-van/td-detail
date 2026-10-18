@@ -22,6 +22,7 @@ import {
   LogOut,
   Search,
   ArrowRight,
+  Zap,
 } from 'lucide-react';
 import { CustomerAuthDialog } from '@/components/CustomerAuthDialog';
 import { cn } from '@/lib/utils';
@@ -64,6 +65,12 @@ import { getCookie, setCookie } from 'cookies-next';
 function getMerchantIcon(merchantId?: string, category?: string) {
   if (merchantId === 'merchant_music' || category === 'digital_music') {
     return Disc;
+  }
+  if (merchantId === 'merchant_b' || category === 'tech_accessories') {
+    return Zap;
+  }
+  if (merchantId === 'merchant_platform' || category === 'platform_support') {
+    return Sparkles;
   }
   return ShoppingBag;
 }
@@ -309,7 +316,7 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
           ) : conversations.length === 0 ? (
             <div className="p-4 text-center text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
               <p>No conversations yet.</p>
-              <p className="mt-1 text-[11px]">Click "New Inquiry" to ask Gemini.</p>
+              <p className="mt-1 text-[11px]">Click "New Inquiry" to start a chat.</p>
             </div>
           ) : (
             groupedConversations.map((group) => {
@@ -477,7 +484,7 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
               <span>Select Store to Chat With</span>
             </DialogTitle>
             <DialogDescription>
-              Choose any participating merchant to start a new chat. Gemini AI grounds answers in the store's verified orders and policies.
+              Choose any participating merchant to start a new chat. Answers are strictly grounded in verified orders and store policies.
             </DialogDescription>
           </DialogHeader>
 

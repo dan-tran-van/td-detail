@@ -63,6 +63,15 @@ function getDefaultMerchantUsers(): MerchantUser[] {
       role: 'owner',
       createdAt: '2026-03-01T00:00:00Z',
     },
+    {
+      id: 'usr_platform_admin',
+      email: 'admin@tdretail.com',
+      name: 'Platform Operations Specialist',
+      merchantId: 'merchant_platform',
+      merchantName: 'TD Retail Platform Support',
+      role: 'owner',
+      createdAt: '2026-03-01T00:00:00Z',
+    },
   ];
 }
 

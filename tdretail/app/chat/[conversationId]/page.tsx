@@ -335,7 +335,7 @@ function ConversationThreadInner() {
 
       const data = await res.json();
       if (res.ok) {
-        setDemoNotice('Email reply received via webhook! Gemini AI reply queued.');
+        setDemoNotice('Email reply received via webhook! Automated response queued.');
         setSimulatedEmailText('');
         await loadThreadData(true);
       } else {
@@ -690,7 +690,7 @@ function ConversationThreadInner() {
                       ) : isAI ? (
                         <>
                           <Sparkles className="h-3 w-3 text-primary" />
-                          <span className="font-semibold text-foreground">Gemini Support Agent</span>
+                          <span className="font-semibold text-foreground">Store Support Specialist (AI)</span>
                           <Badge variant="outline" className="text-[9px] h-3.5 px-1 uppercase">
                             AI Grounded
                           </Badge>
@@ -730,7 +730,7 @@ function ConversationThreadInner() {
                       )}
                     </div>
 
-                    {/* Gemini Tool Calls Inspector */}
+                    {/* Tool Calls Inspector */}
                     {hasToolCalls && (
                       <div className="mt-1.5 w-full">
                         <button
@@ -782,7 +782,7 @@ function ConversationThreadInner() {
             <div className="p-3 sm:p-4 border-t border-border/80 bg-background shrink-0">
               <form onSubmit={handleSendMessage} className="flex items-center gap-2 max-w-4xl mx-auto">
                 <Textarea
-                  placeholder={`Ask ${merchant?.name} support (Gemini verifies order grounding)...`}
+                  placeholder={`Ask ${merchant?.name} support (verified order grounding)...`}
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={(e) => {

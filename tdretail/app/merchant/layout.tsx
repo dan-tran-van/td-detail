@@ -287,11 +287,11 @@ function MerchantLayoutInner({ children }: { children: React.ReactNode }) {
                     <SidebarMenuButton
                       render={<NextLink href="/merchant/outbox" />}
                       isActive={pathname?.startsWith('/merchant/outbox')}
-                      tooltip="Sent Emails by Gemini"
+                      tooltip="Dispatched Outbox Emails"
                       className="cursor-pointer font-medium text-xs rounded-lg"
                     >
                       <Mail className="h-4 w-4" />
-                      <span>Gemini Outbox</span>
+                      <span>Dispatched Outbox</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>

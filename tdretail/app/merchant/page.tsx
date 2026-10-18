@@ -91,7 +91,7 @@ export default function MerchantOverviewPage() {
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">
-            Multi-merchant operations center. Monitored by Gemini 2.5 Flash with ground-truth support policies.
+            Multi-merchant operations center. Monitored by autonomous resolution with ground-truth support policies.
           </p>
         </div>
 
@@ -179,7 +179,7 @@ export default function MerchantOverviewPage() {
         <Card className="border-border bg-card/80 backdrop-blur-xs">
           <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Gemini Outbox Dispatched
+              Dispatched Outbox Emails
             </CardTitle>
             <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
               <Mail className="h-4 w-4" />
@@ -207,7 +207,7 @@ export default function MerchantOverviewPage() {
                 <span>Escalated Inquiries</span>
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground">
-                Inquiries where Gemini triggered human escalation
+                Inquiries requiring human intervention
               </CardDescription>
             </div>
             <NextLink href="/merchant/escalations">
@@ -222,7 +222,7 @@ export default function MerchantOverviewPage() {
             {escalations.length === 0 ? (
               <div className="py-8 text-center text-xs text-muted-foreground space-y-2">
                 <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto opacity-80" />
-                <p>No active escalations. Gemini is successfully resolving queries automatically.</p>
+                <p>No active escalations. All customer queries are resolving automatically.</p>
               </div>
             ) : (
               escalations.slice(0, 3).map((conv) => (
@@ -330,7 +330,7 @@ export default function MerchantOverviewPage() {
           <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
-              <span>Active Gemini Grounding Rules ({session.merchant.name})</span>
+              <span>Active Grounding Rules ({session.merchant.name})</span>
             </CardTitle>
             <NextLink href="/merchant/settings">
               <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-primary">

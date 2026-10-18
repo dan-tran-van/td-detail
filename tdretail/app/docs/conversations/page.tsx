@@ -122,11 +122,23 @@ const data = await response.json();`,
         </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
           <Bot className="h-8 w-8 text-primary shrink-0" />
-          <span>Conversations & Gemini Agent API</span>
+          <span>Conversations & Resolution Engine API</span>
         </h1>
         <p className="text-base text-muted-foreground leading-relaxed max-w-3xl">
-          The Conversations API orchestrates support interactions between customers and the TD Retail Google Gemini AI Agent. Every interaction executes server-side tool lookups and enforces ground-truth return and warranty policies with zero hallucination.
+          The Conversations API orchestrates support interactions between customers and the TD Retail autonomous resolution engine. Every interaction executes server-side tool lookups and enforces ground-truth return and warranty policies with zero hallucination.
         </p>
+
+        {/* Model Transparency Callout */}
+        <div className="p-4 rounded-xl border border-sky-500/30 bg-sky-500/5 flex items-start gap-3 text-xs leading-relaxed">
+          <Sparkles className="h-4 w-4 text-sky-400 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold text-foreground">Underlying Model: Google Gemini 3.5 Flash Lite </span>
+            <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-[11px] text-primary border border-border">gemini-3.5-flash-lite</code>
+            <p className="text-muted-foreground mt-1">
+              Connected via the modern <code className="font-mono text-[11px]">@google/genai</code> SDK with native function calling. The engine invokes verified database tools to look up order states, courier notes, and digital vault items with sub-second latency.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Grounded Tool Calling Mechanism */}

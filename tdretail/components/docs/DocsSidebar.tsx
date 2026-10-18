@@ -57,7 +57,7 @@ const DOC_SECTIONS: DocSection[] = [
         method: 'PATCH',
       },
       {
-        title: 'Conversations & Gemini AI',
+        title: 'Conversations & Resolution Engine',
         href: '/docs/conversations',
         icon: Bot,
         method: 'POST',

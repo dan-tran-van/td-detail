@@ -103,6 +103,33 @@ export const SEED_MERCHANTS: Merchant[] = [
     storefrontUrl: 'https://technology-merchant-215785827581.asia-southeast1.run.app',
     createdAt: '2026-10-01T00:00:00Z',
   },
+  {
+    id: 'merchant_platform',
+    name: 'TD Retail Platform Support',
+    slug: 'td-retail-platform',
+    category: 'platform_support',
+    tagline: 'Platform Architecture, Subscriptions, Enterprise Plans & General Support',
+    description: 'Official customer support and technical consultation for TD Retail multi-merchant platform, enterprise subscription plans, and API integration.',
+    brandColor: '#3b82f6',
+    accentColor: '#6366f1',
+    iconName: 'sparkles',
+    supportEmail: 'platform-support@tdretail.com',
+    supportMode: 'hybrid_ai_human',
+    supportPolicy: {
+      returns: 'Enterprise subscription plans feature a 30-day money-back guarantee for initial onboarding and pilot phases.',
+      refunds: 'Prorated subscription refunds are processed upon request for unused plan terms within 30 days of activation.',
+      deliveryOrDownload: 'Instant digital provisioning of merchant API keys, sandbox credentials, and enterprise cluster deployments upon plan confirmation.',
+      escalationThreshold: 'Enterprise SLA negotiations, custom billing arrangements, or platform capacity upgrades escalate to TD Platform Executives.',
+    },
+    demoPromptSuggestions: [
+      'What enterprise subscription plans and pricing tiers do you offer?',
+      'Can you explain how TD Retail isolates multi-tenant store data?',
+      'How do we onboard an external storefront to TD Retail?',
+      'What SLA and support channels are included in enterprise tiers?',
+    ],
+    storefrontUrl: '/',
+    createdAt: '2026-08-01T00:00:00Z',
+  },
 ];
 
 export const SEED_ORDERS: Order[] = [
