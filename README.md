@@ -124,30 +124,38 @@ Visit:
 ## 🌟 Key Architecture & Multi-Merchant Capabilities
 
 ### 1. Zero-Touch Visitor Isolation & Order Sync
-- Shoppers on `music-merchant` are assigned unique, collision-free visitor IDs (`cust_visitor_xxxx`, `ORD-MUS-XXXX-8821`).
+- Shoppers on `music-merchant` and `technology-merchant` are assigned unique, collision-free visitor IDs (`cust_visitor_xxxx`, `ORD-MUS-XXXX-8821`).
 - Newly checked-out orders and demo orders automatically sync to `tdretail` via `POST /api/orders` in the background.
 - When shoppers click **"Get Support Now"**, the support thread is instantly initialized on `tdretail` without requiring manual database resets or logins.
 
-### 2. Server-Grounded Gemini AI Agent
-- Powered by Google Gemini (`gemini-3.5-flash-lite`).
-- Zero hallucination: The agent calls the server-side tool `lookupOrderStatus` to fetch live database records before answering order tracking, download key, or delivery questions.
-- Multi-merchant boundary enforcement: The server strictly rejects order queries across different merchant boundaries.
-- Live human escalation: Triggered automatically when issues exceed automated thresholds or when requested by the customer.
+### 2. Customer Authentication, Guest Isolation & 1-Click Conversation Handoff
+- **SSR Cookie Session Architecture**: Customer sessions are managed via `td_customer_session` HTTP-only cookie (base64 JSON of `CustomerAuthPayload`: `{ customerId, email, name, isGuest }`) and `td_customer_id`.
+- **Dynamic Guest Isolation**: Anonymous visitors receive isolated guest credentials (`cust_guest_xxxx`, `guest_xxxx@tdretail.guest`), preventing active support threads or purchase histories from leaking to other anonymous visitors.
+- **1-Click Conversation Handoff**: When a guest logs in or clicks **"Save Chat & Log In"**, `TDStore.claimConversation()` atomically transfers the thread, customer email, and name to their permanent account, appending an audit record.
+- **Full Window Navigation**: Handoff executes `window.location.href = /chat/${handoffConversationId}` to guarantee server-side layout re-rendering, instantly showing the logged-in customer profile in the active sidebar and highlighting the claimed conversation.
 
-### 3. Dynamic Cloud Run Configuration
+### 3. Server-Grounded Gemini AI Agent with 100% Dynamic Grounding
+- **Model**: Powered by Google Gemini (`gemini-3.5-flash-lite` via `@google/genai`).
+- **Function Calling & Tool Role Protocol**: Calls server-side tools (`lookupOrderStatus`, `requestHumanEscalation`). Function responses in `followupContents` strictly use `role: 'tool'` (or `'function'`) with `[{ functionResponse: { name, response, id } }]`.
+- **Strict Alternating Turn Invariant**: Preserves `user -> model -> user` turn structure. Filters internal system audit messages and merges consecutive turns of the same role with `\n\n` to prevent Gemini API 400 errors.
+- **Human Specialist Attribution**: Specialist replies (`sender: 'human_agent'`) from `/merchant/escalations` map to `role: 'model'` with explicit prefix `[Human Support Specialist (${msg.senderName})]: ...`, instructing Gemini to treat their decisions as authoritative ground truth.
+- **Zero Hardcoded Categories**: All live responses and grounded fallback engines use dynamic data-driven formatters (`formatDynamicOrderResponse`, `formatDynamicPolicyResponse`) deriving policies and fulfillment details directly from `merchant.supportPolicy` and order items.
+- **Multi-Merchant Boundary Enforcement**: The server strictly rejects order queries across different merchant boundaries (`403 Forbidden`).
+
+### 4. Dynamic Cloud Run Configuration
 - `music-merchant` and `technology-merchant` dynamically discover `tdretail` at runtime via `RootLayout` script injection and `lib/config.ts`, automatically switching between local `http://localhost:3000` and the live Cloud Run backend without hardcoded bundle URLs.
 
-### 4. SendGrid Production Email & Inbound Parse
+### 5. SendGrid Production Email & Inbound Parse
 - Dispatches transactional AI resolution emails using custom authenticated domain (`support@yourdomain.com`).
 - Direct reply routing (`reply+{conversationId}@inbound.yourdomain.com`) enables shoppers to reply directly from their personal email client.
 - Inbound Parse webhook (`POST /api/webhooks/sendgrid`) ingests replies, appends them to the conversation thread, and triggers automated Gemini responses.
 
-### 5. Multi-Merchant Order Lifecycle & Real-Time Fulfillment Updates
+### 6. Multi-Merchant Order Lifecycle & Real-Time Fulfillment Updates
 - Merchants update order status (`processing`, `out_for_delivery`, `delivered`, `cancelled`, `refunded`), tracking numbers, courier notes, and digital license keys via `PATCH /api/orders/[id]`.
 - Strict multi-merchant boundary protection: merchants can only modify orders assigned to their verified `merchantId`.
 - Gemini AI reflects status transitions and digital license keys in real time when customers inquire.
 
-### 6. Dedicated Merchant Portal (`/merchant/*`)
+### 7. Dedicated Merchant Portal (`/merchant/*`)
 - **Operational Dashboard (`/merchant`)**: Real-time KPI metric cards (Pending Escalations, Orders to Fulfill, Dispatched AI Emails), active Gemini policy summaries, and quick links.
 - **Human Escalation Center (`/merchant/escalations`)**: Review tickets escalated by Gemini AI, inspect multi-part reasoning/tool calls, reply directly as `human_agent`, dispatch email notifications, and resolve tickets.
 - **Manual Order Fulfillment (`/merchant/orders`)**: Search and filter merchant orders, trigger status transitions, assign courier tracking numbers, and provision digital download keys.
@@ -155,7 +163,7 @@ Visit:
 - **Store Details & Ground-Truth AI Policies (`/merchant/settings`)**: Customize brand identity, colors, support email, storefront URL, and ground-truth Gemini support policies (returns, refunds, delivery, escalation threshold, operating mode, and suggested demo prompts).
 - **Merchant Registration (`/merchant/register`)**: 3-step dynamic onboarding wizard for registering new participating storefronts.
 
-### 7. Dual-Mode Authentication & Demo Merchant Protection
+### 8. Dual-Mode Authentication & Demo Merchant Protection
 - **HTTP-Only Cookie Session (`td_merchant_session`)**: Enables instant SSR rendering with zero client-side auth hydration flicker or bundle bloat.
 - **1-Click Quick Demo Evaluation**: Direct 1-click evaluation switcher between SoundWave Digital (`merchant_music`) and Volt Nest (`merchant_b`).
 - **Protected Seed Merchants**: Default seeded merchants (`SoundWave Digital`, `Volt Nest`, `FreshCart Direct`) are protected with `403 Forbidden` (`isDemoProtected: true`) to preserve a consistent evaluation experience. Custom registered merchants remain 100% editable.
@@ -168,10 +176,12 @@ This section provides essential context for future developers and maintainers ex
 
 ### A. Authentication & Session Architecture
 The platform intentionally separates customer and merchant sessions:
-1. **Shopper Persona Sessions (`td_customer_id` cookie)**:
-   - Identifies the current consumer viewing `/inbox` or chatting via `/chat/[id]`.
+1. **Shopper Authentication & Guest Isolation (`td_customer_session` cookie)**:
+   - Manages customer identity in `/inbox`, `/chat/[id]`, and customer APIs.
+   - Encoded as base64 JSON payload of `CustomerAuthPayload` (`customerId`, `email`, `name`, `isGuest`).
+   - Anonymous visitors get collision-free guest IDs (`cust_guest_xxxx`) and emails (`guest_xxxx@tdretail.guest`).
    - Seeded demo personas: `cust_sarah_connor` and `cust_alex_chen`.
-   - Managed via `/api/session` and the floating persona modal dialog.
+   - Logging in via `/login` or clicking **"Save Chat & Log In"** atomically claims the conversation and redirects via `window.location.href = /chat/${handoffConversationId}` to re-render root SSR layouts with the updated profile.
 2. **Merchant Portal Sessions (`td_merchant_session` HTTP-only cookie)**:
    - Scoped strictly to merchant staff under `/merchant/*`.
    - Implemented in `tdretail/lib/merchantSession.ts`.
@@ -201,13 +211,15 @@ To connect a 4th storefront to the platform:
 4. **Support Drawer**: Embed the customer support drawer sending `POST /api/conversations` and `POST /api/conversations/[id]/messages`.
 5. **URL Resolution**: Add the merchant ID mapping to `tdretail/lib/storefrontConfig.ts` in `resolveMerchantStorefrontUrl()`.
 
-### D. Extending the Gemini AI Agent
+### D. Extending the Gemini AI Agent & Grounding Engine
 The agent implementation lives in `tdretail/lib/services/geminiService.ts`:
 - **Model**: Uses `@google/genai` with `gemini-3.5-flash-lite`.
 - **Declaring Tools**: Add tool declarations to `orderLookupTool` in `geminiService.ts`.
-- **Executing Tools**: Handle the tool call in the `fc.name` switch block. **Crucial rule**: Always preserve the function call `id` (`fc.id`) on the `functionResponse` part to maintain turn structure.
-- **Turn Structure Rule**: Never allow consecutive `user` turns (`user -> user`) in the history array passed to Gemini, as the API will reject them with HTTP 400.
-- **Grounded Fallback Engine**: If `GEMINI_API_KEY` is not provided or hits rate limits (HTTP 429), `executeGroundedFallbackEngine()` kicks in automatically to verify orders against the database and respond deterministically.
+- **Tool Response Role Invariant**: Tool call results passed in `followupContents` must use `role: 'tool'` (or `'function'`) with `[{ functionResponse: { name, response, id } }]`. Never send `role: 'user'` for function response parts.
+- **Strict Turn Alternation**: History must alternate strictly between `user` and `model`. Consecutive same-role turns are merged with `\n\n`, and system audit messages (`sender: 'system'`) are filtered out.
+- **Specialist Human Attribution**: Specialist replies (`sender: 'human_agent'`) are mapped to `role: 'model'` with `[Human Support Specialist (${msg.senderName})]: ...` prefix so Gemini treats human interventions as ground truth.
+- **Dynamic Domain Grounding**: Never hardcode merchant categories (`if (merchant.category === ...)`). Use generic formatters (`formatDynamicOrderResponse`, `formatDynamicPolicyResponse`) that dynamically read `merchant.supportPolicy` and order items.
+- **Grounded Fallback Engine**: If `GEMINI_API_KEY` is not provided or hits rate limits (HTTP 429), `executeGroundedFallbackEngine()` kicks in automatically to verify orders against the database and respond deterministically using markdown bullet points.
 
 ### E. Storage Persistence & Cache Invalidation
 Storage is managed by `tdretail/lib/firebase/store.ts`:
@@ -215,6 +227,11 @@ Storage is managed by `tdretail/lib/firebase/store.ts`:
 - Otherwise, it falls back to local file-based storage at `tdretail/.data/db.json`.
 - **Multi-Process Cache Invalidation**: The in-memory cache monitors `fs.statSync(DATA_FILE).mtimeMs`. When one Next.js worker or API route writes to disk, other worker threads automatically invalidate their in-memory cache and re-read the latest state.
 - **Reseeding**: To reset back to pristine demo data, trigger `POST /api/seed` or click "Reset All Mock Data" in the customer persona modal.
+
+### F. Environment Gating & UI Invariants
+1. **Developer Tooling Gating**: Developer drawers (such as the Inbound Email & Specialist Tools drawer in `/chat/[conversationId]`) only render on `localhost`, `127.0.0.1`, `NODE_ENV === 'development'`, or when `?dev=1` is explicitly present in the query parameters.
+2. **React Key Uniqueness**: All merchant listings and navigation tabs must be deduplicated by `merchant.id` to prevent duplicate key console errors.
+3. **shadcn Semantic Tokens Only**: Never use hardcoded hex colors or arbitrary utility colors; use semantic CSS variables (`bg-background`, `text-foreground`, `border-border`, etc.).
 
 ---
 

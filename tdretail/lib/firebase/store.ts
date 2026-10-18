@@ -230,14 +230,25 @@ export class TDStore {
       try {
         const snap = await firestore.collection('merchants').get();
         if (!snap.empty) {
-          return snap.docs.map((d) => d.data() as Merchant);
+          const list = snap.docs.map((d) => d.data() as Merchant);
+          const seen = new Set<string>();
+          return list.filter((m) => {
+            if (!m?.id || seen.has(m.id)) return false;
+            seen.add(m.id);
+            return true;
+          });
         }
       } catch (e) {
         console.warn('[Store] Firestore read error for merchants, falling back to local:', e);
       }
     }
     const state = loadState();
-    return Object.values(state.merchants);
+    const seen = new Set<string>();
+    return Object.values(state.merchants).filter((m) => {
+      if (!m?.id || seen.has(m.id)) return false;
+      seen.add(m.id);
+      return true;
+    });
   }
 
   static async getMerchantById(id: string): Promise<Merchant | null> {
@@ -454,7 +465,11 @@ export class TDStore {
   }
 
   // --- Conversations ---
-  static async getConversations(customerId?: string, merchantId?: string): Promise<Conversation[]> {
+  static async getConversations(
+    customerId?: string,
+    merchantId?: string,
+    customerEmail?: string
+  ): Promise<Conversation[]> {
     const firestore = await this.getFirestoreClient();
     if (firestore) {
       try {
@@ -472,8 +487,13 @@ export class TDStore {
     }
 
     const state = loadState();
+    const normEmail = customerEmail?.trim().toLowerCase();
     const convs = Object.values(state.conversations).filter((c) => {
-      if (customerId && c.customerId !== customerId) return false;
+      if (customerId) {
+        const matchId = c.customerId === customerId;
+        const matchEmail = normEmail && c.customerEmail?.toLowerCase() === normEmail;
+        if (!matchId && !matchEmail) return false;
+      }
       if (merchantId && c.merchantId !== merchantId) return false;
       return true;
     });
@@ -481,6 +501,54 @@ export class TDStore {
     return convs.sort(
       (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     );
+  }
+
+  static async claimConversation(
+    conversationId: string,
+    customer: Customer
+  ): Promise<Conversation | null> {
+    const existing = await this.getConversationById(conversationId);
+    if (!existing) return null;
+
+    const now = new Date().toISOString();
+    const updated: Conversation = {
+      ...existing,
+      customerId: customer.id,
+      customerEmail: customer.email,
+      customerName: customer.name,
+      updatedAt: now,
+    };
+
+    const firestore = await this.getFirestoreClient();
+    if (firestore) {
+      try {
+        await firestore.collection('conversations').doc(conversationId).update({
+          customerId: customer.id,
+          customerEmail: customer.email,
+          customerName: customer.name,
+          updatedAt: now,
+        });
+      } catch (e) {
+        console.warn(`[Store] Firestore update error for claimed conversation ${conversationId}:`, e);
+      }
+    }
+
+    const state = loadState();
+    state.conversations[conversationId] = updated;
+
+    // Append system event message
+    const systemMsg: Message = {
+      id: `msg_sys_${crypto.randomUUID()}`,
+      conversationId,
+      sender: 'system',
+      senderName: 'TD Retail System',
+      content: `Conversation claimed and linked to ${customer.name} (${customer.email}).`,
+      timestamp: now,
+    };
+    await this.addMessage(systemMsg);
+
+    saveState();
+    return updated;
   }
 
   static async getConversationById(id: string): Promise<Conversation | null> {

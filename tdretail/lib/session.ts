@@ -3,15 +3,15 @@ import { Customer } from '@/lib/types';
 import { TDStore } from '@/lib/firebase/store';
 import { SEED_CUSTOMERS } from '@/lib/data/seedData';
 import { initFirebaseAdmin } from '@/lib/firebase/admin';
+import { getCustomerSession } from '@/lib/customerSession';
 
-const CUSTOMER_COOKIE_NAME = 'td_customer_id';
 const FIREBASE_TOKEN_COOKIE = 'td_firebase_token';
 
 /**
  * Resolves the active customer using a hybrid approach:
  * 1. Checks for a verified Firebase Auth Bearer token in the Authorization header or cookie.
  * 2. If present and valid, fetches or provisions the authenticated customer in TDStore.
- * 3. Otherwise, falls back to the active demo persona cookie (`td_customer_id`) or Sarah Connor.
+ * 3. Otherwise, resolves via getCustomerSession() (supporting authenticated users & isolated guests).
  */
 export async function getCurrentCustomer(): Promise<Customer> {
   // 1. Try Firebase Auth token verification
@@ -41,6 +41,7 @@ export async function getCurrentCustomer(): Promise<Customer> {
               name: decoded.name || decoded.email.split('@')[0],
               email: decoded.email,
               avatarUrl: decoded.picture || undefined,
+              isGuest: false,
               createdAt: new Date().toISOString(),
             });
           }
@@ -48,24 +49,16 @@ export async function getCurrentCustomer(): Promise<Customer> {
         }
       }
     } catch (err) {
-      // In case of invalid/expired token, smoothly fallback to demo persona
-      console.warn('[Session] Firebase token validation failed, falling back to persona session:', err);
+      console.warn('[Session] Firebase token validation failed, falling back to customer session:', err);
     }
   }
 
-  // 2. Demo Persona cookie fallback (Sarah Connor / Alex Chen / etc.)
-  const cookieStore = await cookies();
-  const customerId = cookieStore.get(CUSTOMER_COOKIE_NAME)?.value || 'cust_sarah_connor';
-
-  const customer = await TDStore.getCustomer(customerId);
-  if (customer) {
-    return customer;
-  }
-
-  // Fallback to default demo customer
-  return SEED_CUSTOMERS[0];
+  // 2. Delegate to Customer Session
+  const session = await getCustomerSession();
+  return session.customer;
 }
 
 export function getDefaultCustomerId(): string {
   return 'cust_sarah_connor';
 }
+

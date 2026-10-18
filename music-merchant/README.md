@@ -43,7 +43,9 @@ Configuration is managed in `lib/config.ts`:
 
 1. **Lossless Catalog & Instant Vault**:
    - 5 seeded FLAC releases with bit-perfect audio specs, stem packages, and instant cryptographic license generation.
-2. **Zero-Touch Order Sync**:
-   - Every checked-out order syncs via `POST /api/orders` to the central `tdretail` platform in the background.
-3. **Embedded AI Support Drawer**:
+2. **Zero-Touch Order Sync & Collision-Free Visitor Isolation**:
+   - Shoppers receive unique visitor IDs (`cust_visitor_xxxx`) and demo orders (`ORD-MUS-XXXX`).
+   - Every checked-out order syncs via `POST ${resolveTDRetailUrl()}/api/orders` to the central `tdretail` platform in the background, registered under `merchant_music`.
+3. **Embedded AI Support Drawer & Deep Linking**:
    - Support drawer powered by `tdretail`'s Gemini AI Agent, pre-grounded with order status and digital license key lookups.
+   - Deep links directly into TD Retail active chat (`/chat/${conversationId}`), allowing customers to view responses or claim conversations to their personal accounts.

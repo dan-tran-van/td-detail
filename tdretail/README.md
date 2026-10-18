@@ -16,17 +16,31 @@ This platform allows shoppers who buy from separate participating merchant store
 
 ### 1. Consolidated Customer Inbox (`/inbox`)
 * **Multi-Merchant Centralization:** No more logging into separate support portals for each store. Customers view all tickets in one dashboard.
-* **Domain Filtering & Search:** Instant filtering between merchants (Digital Music vs. Groceries) and ticket lifecycle states (Active, Escalated, Resolved).
+* **Domain Filtering & Search:** Instant filtering between merchants (SoundWave Digital, Volt Nest, FreshCart Direct) and ticket lifecycle states (Active, Escalated, Resolved).
 * **Grounded Ticket Launcher:** Pick an order from recent merchant purchases to ground the conversation context from the very first message.
 
 ### 2. Dedicated Grounded Conversation Thread (`/chat/[conversationId]`)
-* **Zero AI Hallucination:** The Gemini Agent uses server-side function calling (`lookupOrderStatus`) to query live database records before providing answers.
-* **Server-Enforced Tenant Security:** The server validates session credentials, customer email, and merchant boundaries. Orders belonging to *Merchant A* can never be leaked to *Merchant B*.
-* **Interactive Tool Inspector:** Judges and users can click **"Inspect Server Tool Calls"** on any AI message to view the exact function arguments, timestamp, and returned database payload.
+* **Zero AI Hallucination with 100% Dynamic Domain Grounding:** The Gemini Agent uses server-side function calling (`lookupOrderStatus`) to query live database records before providing answers. Responses dynamically format items, licenses, download links, courier tracking, and return/warranty policies directly from database state—with zero hardcoded merchant categories!
+* **Server-Enforced Tenant Security:** The server validates session credentials, customer email, and merchant boundaries. Orders belonging to *Merchant A* can never be accessed or modified by *Merchant B*.
+* **Interactive Tool Inspector:** Click **"Inspect Server Tool Calls"** on any AI message to view the exact function arguments, timestamp, and returned database payload.
 * **Human Escalation Workflow:** Customers can click **"Request Human Assistance"**, automatically alerting the merchant support team and updating the thread status to `escalated`.
 * **Live Message Stream:** 4-second auto-polling ensures customer email replies and agent actions appear live on the screen without page reloads.
 
-### 3. Bidirectional Email Reply Routing (`/outbox` & SendGrid Webhook)
+### 3. Customer Authentication, Guest Isolation & Seamless Conversation Handoff
+* **SSR Cookie Sessions (`td_customer_session`):** Base64 JSON containing `{ customerId, email, name, isGuest }` read synchronously by Next.js App Router server components.
+* **Dynamic Guest Isolation:** Anonymous visitors get unique collision-free guest IDs (`cust_guest_xxxx`) and emails (`guest_xxxx@tdretail.guest`), preventing session leakage in shared environments.
+* **1-Click Conversation Handoff:** Guests can click **"Save Chat & Log In"** or log in via `/login`. `TDStore.claimConversation()` atomically rebinds the conversation, customer email, and name to the customer's permanent account, appending an audit record.
+* **Full Window Navigation:** The handoff triggers `window.location.href = /chat/${handoffConversationId}`, ensuring the active panel sidebar and layout SSR-hydrate immediately with the new profile and highlighted thread.
+
+### 4. Dedicated Merchant Portal (`/merchant/*`)
+* **Operational Overview (`/merchant`):** Real-time KPI metric cards (Pending Escalations, Orders to Fulfill, Dispatched AI Emails), active Gemini policy summaries, and quick links.
+* **Human Escalation Management (`/merchant/escalations`):** Specialized console for reviewing tickets escalated by Gemini, viewing multi-part reasoning logs, replying as `human_agent`, sending email notifications, and resolving tickets.
+* **Manual Order Fulfillment (`/merchant/orders`):** Order search, status transitions (`processing` $\rightarrow$ `out_for_delivery` $\rightarrow$ `delivered`), tracking numbers, courier notes, and digital license key provisioning.
+* **Gemini Outbox Audit (`/merchant/outbox`):** Audit outgoing AI customer emails with SendGrid simulation and preview dialogs.
+* **Store Profile & AI Support Policies (`/merchant/settings`):** Customize brand identity, support emails, storefront URLs, and ground-truth Gemini support policies (returns, refunds, delivery, escalation threshold, operating mode). Protected demo stores are read-only with clear visual indicators.
+* **Merchant Registration Wizard (`/merchant/register`):** 3-step dynamic onboarding wizard for registering new participating storefronts.
+
+### 5. Bidirectional Email Reply Routing (`/outbox` & SendGrid Webhook)
 * **Direct Reply from Email Client:** Outgoing notifications include a dynamic header:
   ```http
   Reply-To: TD Retail Support <reply+{conversationId}@inbound.tdretail.example.com>
@@ -35,11 +49,9 @@ This platform allows shoppers who buy from separate participating merchant store
 * **SendGrid Inbound Parse Webhook (`POST /api/webhooks/sendgrid`):** Ingests incoming customer email replies, parses the thread token, verifies sender email ownership, appends the message into the active conversation, triggers the Gemini Agent, and sends an email reply back to the customer!
 * **Local Development Outbox Viewer (`/outbox`):** When running without SendGrid credentials, outgoing emails are captured in the outbox. An interactive **"Simulate Customer Reply"** button lets judges trigger the full round-trip webhook pipeline with one click.
 
-### 4. Merchant Storefront Integration Demos
-* **Digital Music Storefront (`/storefront/music`):** Demonstrates **SoundWave Digital** (bit-perfect 24-bit FLAC audio, artist master stems, permanent vault licenses).
-* **Groceries Storefront (`/storefront/groceries`):** Demonstrates **FreshCart Direct** (farm-fresh organic groceries, cold-chain refrigerated delivery guarantee).
-* **Order Support Widgets:** Embedded buttons on order cards launch directly into TD Retail with order context pre-grounded.
-* **Simulate Purchase Action:** Add new real-time orders to test Gemini's tool lookups on fresh data.
+### 6. External Participating Storefront Integration
+* **SoundWave Digital Storefront (Port 3001):** Lossless digital audio catalog, instant FLAC license activation, and embedded support drawer.
+* **Volt Nest Storefront (Port 3002):** Modern consumer tech accessories, 2-year warranty lookup, Zod-validated secure checkout, and integrated AI support drawer.
 
 ---
 
@@ -171,22 +183,47 @@ Follow these steps to experience all capabilities:
 
 ## 🧑‍💻 Developer Guide: Architecture & Extending TD Retail
 
-### A. Authentication & Session Architecture
+### A. Customer Authentication, Guest Isolation & Seamless Conversation Handoff
 TD Retail maintains strict separation between consumer shoppers and merchant staff:
-- **Shopper Persona Sessions (`td_customer_id` cookie)**: Controls customer identity in `/inbox` and `/chat/[id]`. Switchable via the persona dialog or `POST /api/session`.
-- **Merchant Staff Sessions (`td_merchant_session` HTTP-only cookie)**: Scoped to `/merchant/*`. Passwords hashed with Node's `crypto.pbkdf2Sync`.
-- **Why Cookie Sessions Over Client Firebase Auth?**
-  1. **Instant 1-Click Evaluation**: Judges switch between SoundWave Digital and Volt Nest with zero popups or typing.
-  2. **SSR Native**: Next.js App Router reads `cookies()` synchronously on the initial HTTP request, eliminating client auth hydration flicker.
-  3. **Zero Client SDK Footprint**: Avoids pulling the heavy `@firebase/auth` client bundle into the browser.
-  4. **Zero Cloud Run Domain Whitelist Headaches**: Works out-of-the-box on `localhost`, Cloud Run revision URLs (`asia-southeast1.run.app`), or custom domains without Firebase Console whitelist updates.
+- **Shopper Authentication & Cookie Sessions (`td_customer_session`)**:
+  - Encoded as base64 JSON payload of `CustomerAuthPayload` (`customerId`, `email`, `name`, `isGuest`).
+  - Read synchronously by Next.js App Router server components (`cookies()`) and API handlers (`getCurrentCustomer()`), eliminating hydration flicker.
+  - Anonymous visitors receive collision-free guest IDs (`cust_guest_xxxx`) and emails (`guest_xxxx@tdretail.guest`).
+- **1-Click Evaluation Personas & Custom Email Login**:
+  - Supports 1-click persona switching (Sarah Connor, Alex Chen) and custom customer email sign-in/auto-registration (`/login`, `POST /api/session/login`).
+  - Supports deep linking: `/login?returnUrl=...&claimConv=...`.
+- **Seamless Conversation Handoff**:
+  - When an anonymous visitor logs in or clicks **"Save Chat & Log In"**, `TDStore.claimConversation()` atomically transfers conversation ownership to their permanent account.
+  - `CustomerAuthDialog` reloads via `window.location.href = /chat/${handoffConversationId}` to ensure the root layout (`ModernAppShell`) SSR-hydrates with the new session cookie, immediately rendering the authenticated customer profile in the active sidebar, listing their inbox conversations, and highlighting the claimed thread.
 
-### B. Demo Store Protection & Testing Settings
-- **Protected Seed Merchants**: `merchant_music`, `merchant_a`, `merchant_b`, `merchant_tech`, `merchant_grocery` are read-only (`403 Forbidden` on `PATCH /api/merchant/settings`) to ensure a pristine evaluation environment.
-- **Testing Setting Edits**: To test updating store details, colors, or ground-truth Gemini policies, register a new custom merchant via `/merchant/register` or `POST /api/merchants`, then log in and edit freely (`200 OK`).
+### B. Gemini AI Agent Protocol & 100% Dynamic Domain Grounding
+The agent implementation lives in `lib/services/geminiService.ts`:
+- **Model**: `gemini-3.5-flash-lite` (via `@google/genai`).
+- **Tool Response Role Invariant**: Tool call results in `followupContents` MUST use `role: 'tool'` (or `'function'`) with `[{ functionResponse: { name, response, id } }]`. Never send `role: 'user'` for function response parts.
+- **Strict Turn Alternation**: History must alternate strictly between `user` and `model` (`user -> model -> user -> model`). Consecutive same-role turns are merged with `\n\n`, and system audit messages (`sender: 'system'`) are filtered out.
+- **Specialist Human Attribution**: Specialist replies (`sender: 'human_agent'`) from `/merchant/escalations` map to `role: 'model'` with explicit prefix `[Human Support Specialist (${msg.senderName})]: ...`. The Gemini system prompt instructs the agent to treat human specialist interventions as authoritative ground truth.
+- **Zero Hardcoded Categories**: All live responses and fallback engines use dynamic data-driven formatters (`formatDynamicOrderResponse`, `formatDynamicPolicyResponse`) deriving policies and fulfillment details directly from `merchant.supportPolicy` and order items.
+- **Grounded Fallback Engine**: If `GEMINI_API_KEY` is not provided or hits rate limits (HTTP 429), `executeGroundedFallbackEngine()` kicks in automatically to verify orders against the database and respond deterministically using standard markdown bullet points.
 
-### C. Multi-Process Cache Synchronization
-- When running with the local file mock store (`.data/db.json`), `TDStore` verifies `fs.statSync(DATA_FILE).mtimeMs` before fulfilling requests to guarantee that mutations made by one Next.js worker are immediately reflected in all parallel server processes.
+### C. Dedicated Merchant Portal (`/merchant/*`) & Security Invariants
+- **HTTP-Only Cookie Session (`td_merchant_session`)**:
+  - Managed via `lib/merchantSession.ts`. Passwords are salt-hashed using Node's native `crypto.pbkdf2Sync`.
+  - Scoped strictly to merchant staff under `/merchant/*`.
+- **Demo Store Protection**:
+  - Seeded demo merchants (`merchant_music`, `merchant_a`, `merchant_b`, `merchant_tech`, `merchant_grocery`) are protected in `PATCH /api/merchant/settings` with `403 Forbidden` (`isDemoProtected: true`).
+  - Testing settings mutations MUST be performed against a custom registered merchant (via `/merchant/register` or `POST /api/merchants`).
+- **Multi-Tenant Order Segregation**:
+  - Orders are strictly bound to their registering `merchantId`. Chat sessions for Merchant A can NEVER query or modify orders belonging to Merchant B.
+
+### D. Storage Persistence & Multi-Process Cache Invalidation
+- Managed by `lib/firebase/store.ts`:
+  - Uses Cloud Firestore when `FIREBASE_PROJECT_ID` is present; otherwise falls back to local JSON at `.data/db.json`.
+  - **Multi-Process Cache Invalidation**: In-memory cache verifies `fs.statSync(DATA_FILE).mtimeMs` before fulfilling requests to guarantee mutations made by one Next.js worker process are immediately reflected in all worker processes.
+
+### E. Developer Tooling Environment Gating & UI Invariants
+1. **Developer Tooling Gating**: Developer drawers (such as the Inbound Email & Specialist Tools drawer in `/chat/[conversationId]`) only render on `localhost`, `127.0.0.1`, `NODE_ENV === 'development'`, or when `?dev=1` is explicitly present in the query parameters.
+2. **React Key Uniqueness**: All merchant listings and navigation tabs must be deduplicated by `merchant.id` to prevent duplicate key console errors.
+3. **shadcn Semantic Tokens Only**: Never use hardcoded hex colors or arbitrary utility colors; use semantic CSS variables (`bg-background`, `text-foreground`, `border-border`, etc.).
 
 ---
 
@@ -213,11 +250,15 @@ gcloud run deploy tdretail \
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
 | `GET` | `/api/session` | Get active customer persona & available demo personas |
-| `POST` | `/api/session` | Switch customer persona session |
+| `POST` | `/api/session` | Switch customer persona session (legacy) |
+| `POST` | `/api/session/login` | Authenticate customer with email / demo persona |
+| `POST` | `/api/session/logout` | Clear customer session |
+| `POST` | `/api/session/claim-conversation` | Atomically claim guest conversation to customer account |
 | `GET` | `/api/merchants` | List participating merchants and branding |
+| `POST` | `/api/merchants` | Dynamically register new merchant with support policies |
 | `GET` | `/api/merchants/[id]` | Get merchant support policy and config |
 | `GET` | `/api/orders` | Query customer orders scoped by merchant |
-| `POST` | `/api/orders` | Create simulated purchase from storefront |
+| `POST` | `/api/orders` | Ingest external order from participating storefront |
 | `GET` | `/api/orders/[id]` | Fetch single order by internal ID or public orderId |
 | `PATCH` | `/api/orders/[id]` | Update order status, tracking, courier notes & digital keys |
 | `GET` | `/api/conversations` | Get consolidated customer inbox threads |
@@ -232,6 +273,7 @@ gcloud run deploy tdretail \
 | `GET` | `/api/merchant/session` | Get active merchant staff session |
 | `POST` | `/api/merchant/session` | Log in as merchant staff or 1-click demo switcher |
 | `DELETE` | `/api/merchant/session` | Log out merchant staff session |
+| `POST` | `/api/merchant/register` | Register new participating merchant & staff account |
 | `GET` | `/api/merchant/settings` | Get store details and ground-truth AI support policies |
 | `PATCH` | `/api/merchant/settings` | Update store details & AI policies (protected for demo stores) |
 | `GET` | `/api/merchant/escalations` | List Gemini-escalated tickets for active merchant |

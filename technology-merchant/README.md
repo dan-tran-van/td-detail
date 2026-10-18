@@ -48,16 +48,20 @@ Visit: **`http://localhost:3002`**
 
 ## 4. Key Architectural Features
 
-1. **Merchant Identity (`merchant_b`)**:
-   - Centralized in `lib/config.ts` supporting 3 resolution layers (window config, environment variables, default production endpoint).
+1. **Merchant Identity (`merchant_b`) & Dynamic Registration**:
+   - Centralized in `lib/config.ts` supporting 4 resolution layers (window config, environment variables, local fallback, default production endpoint).
+   - Dynamically registers store support policy (10-day replacement, 1-year warranty) with TD Retail via `POST /api/merchants`.
 2. **Product Catalogue & Detail Pages**:
    - 5 seeded products with tech specs, warranty details, stock badges, and deep-linkable product detail pages (`/products/[id]`).
-3. **Cart & Secure Checkout**:
+3. **Cart & Secure Checkout with Collision-Free Visitor Isolation**:
    - Real-time cart calculation with server-side price protection (Zod validation, client price tampering protection).
+   - Collision-free visitor IDs (`cust_visitor_xxxx`) and demo orders (`ORD-TECH-XXXX`).
    - Dedicated confirmation page at `/orders/[orderId]/confirmation`.
+   - Every checked-out order syncs via `POST ${resolveTDRetailUrl()}/api/orders` to the central `tdretail` platform in the background.
 4. **Warranty & Policy Page**:
    - Dedicated policy page at `/policy` detailing 10-day replacement and 1-year hardware warranty.
-5. **Embedded TD Retail Support Widget**:
+5. **Embedded TD Retail Support Widget & Deep Linking**:
    - Pre-loaded with order context and live streaming connection to the Gemini AI resolution agent.
+   - Deep links directly into TD Retail active chat (`/chat/${conversationId}`), allowing customers to view responses or claim conversations to their personal accounts.
 6. **Dev Outbox**:
    - Built-in simulation viewer at `/outbox` for inspecting dispatched customer confirmation emails.

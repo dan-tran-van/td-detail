@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { CustomerAuthDialog } from '@/components/CustomerAuthDialog';
 import { Conversation, Merchant, Order, Customer } from '@/lib/types';
 
 export default function ConsolidatedInboxPage() {
@@ -30,6 +31,8 @@ export default function ConsolidatedInboxPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [isGuest, setIsGuest] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedMerchantFilter, setSelectedMerchantFilter] = useState<string>('all');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all');
@@ -43,6 +46,7 @@ export default function ConsolidatedInboxPage() {
       if (sessRes.ok) {
         const sData = await sessRes.json();
         setCustomer(sData.customer);
+        setIsGuest(Boolean(sData.isGuest));
       }
 
       const convRes = await fetch('/api/conversations');
@@ -122,6 +126,35 @@ export default function ConsolidatedInboxPage() {
             </Button>
           </div>
 
+          {/* Guest Mode Info Banner */}
+          {isGuest && (
+            <div className="p-4 rounded-xl border border-border bg-card/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm text-foreground">Guest Support Inbox</span>
+                    <Badge variant="outline" className="text-[10px] px-1.5 h-4">
+                      Guest Session
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Browsing as {customer?.name || 'Guest'}. Log in to view your complete multi-merchant purchase and support history.
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setShowAuthDialog(true)}
+                className="text-xs h-8 gap-1.5 shrink-0 cursor-pointer self-start sm:self-auto"
+              >
+                <span>Log In / Switch Account</span>
+              </Button>
+            </div>
+          )}
+
           {/* Quick Metrics */}
           <div className="grid grid-cols-3 gap-3">
             <Card className="bg-card border-border shadow-xs">
@@ -180,7 +213,7 @@ export default function ConsolidatedInboxPage() {
                 All
               </Button>
 
-              {merchants.map((m) => {
+              {Array.from(new Map(merchants.map((m) => [m.id, m])).values()).map((m) => {
                 const isSelected = selectedMerchantFilter === m.id;
                 const isMusic = m.id === 'merchant_music';
 
@@ -346,6 +379,14 @@ export default function ConsolidatedInboxPage() {
             )}
           </div>
         </div>
+
+      <CustomerAuthDialog
+        open={showAuthDialog}
+        onOpenChange={setShowAuthDialog}
+        onSuccess={() => {
+          loadData();
+        }}
+      />
     </div>
   );
 }

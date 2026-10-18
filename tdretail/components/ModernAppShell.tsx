@@ -19,7 +19,9 @@ import {
   ChevronDown,
   PanelLeft,
   PanelLeftClose,
+  LogOut,
 } from 'lucide-react';
+import { CustomerAuthDialog } from '@/components/CustomerAuthDialog';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -109,6 +111,7 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [isGuest, setIsGuest] = useState(false);
   const [availableCustomers, setAvailableCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -132,6 +135,7 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
       if (sessRes.ok) {
         const sData = await sessRes.json();
         setCustomer(sData.customer);
+        setIsGuest(Boolean(sData.isGuest));
         setAvailableCustomers(sData.availableCustomers || []);
       }
 
@@ -255,6 +259,17 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
       setTicketError(err.message || 'Network error');
     } finally {
       setIsCreatingTicket(false);
+    }
+  };
+
+  const handleSignOut = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await fetch('/api/session/logout', { method: 'POST' });
+      await fetchData();
+      window.location.reload();
+    } catch (err) {
+      console.error('Sign out error:', err);
     }
   };
 
@@ -409,36 +424,60 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
           )}
         </SidebarContent>
 
-        {/* Sidebar Footer: Active Shopper Persona */}
+        {/* Sidebar Footer: Active Shopper Persona / Guest State */}
         <SidebarFooter className="p-2 border-t border-border/80 group-data-[collapsible=icon]:p-1">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                size="lg"
-                tooltip={customer ? `${customer.name} (${customer.email})` : 'Shopper Persona'}
-                onClick={() => setIsPersonaDialogOpen(true)}
-                className="w-full h-11 p-1.5 rounded-lg hover:bg-sidebar-accent transition-colors group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center! group-data-[collapsible=icon]:mx-auto"
-              >
-                <Avatar className="h-7 w-7 border border-border shrink-0">
-                  <AvatarImage src={customer?.avatarUrl} />
-                  <AvatarFallback className="text-xs bg-muted text-foreground font-semibold">
-                    {customer?.name?.charAt(0) || 'C'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col min-w-0 flex-1 text-left group-data-[collapsible=icon]:hidden">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-semibold text-foreground truncate">
-                      {customer?.name || 'Customer'}
+              <div className="flex items-center gap-1 w-full">
+                <SidebarMenuButton
+                  size="lg"
+                  tooltip={
+                    isGuest
+                      ? 'Browsing as Guest · Click to sign in'
+                      : customer
+                      ? `${customer.name} (${customer.email}) · Switch account`
+                      : 'Shopper Persona'
+                  }
+                  onClick={() => setIsPersonaDialogOpen(true)}
+                  className="flex-1 h-11 p-1.5 rounded-lg hover:bg-sidebar-accent transition-colors group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center! group-data-[collapsible=icon]:mx-auto"
+                >
+                  <Avatar className="h-7 w-7 border border-border shrink-0">
+                    <AvatarImage src={customer?.avatarUrl} />
+                    <AvatarFallback className="text-xs bg-muted text-foreground font-semibold">
+                      {isGuest ? 'G' : customer?.name?.charAt(0) || 'C'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col min-w-0 flex-1 text-left group-data-[collapsible=icon]:hidden">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-semibold text-foreground truncate">
+                        {isGuest ? (customer?.name || 'Guest Shopper') : (customer?.name || 'Customer')}
+                      </span>
+                      <Badge
+                        variant={isGuest ? 'default' : 'outline'}
+                        className={`text-[9px] h-3.5 px-1 font-normal ${
+                          isGuest ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+                        }`}
+                      >
+                        {isGuest ? 'Sign In' : 'Switch'}
+                      </Badge>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground truncate">
+                      {isGuest ? 'Browsing as Guest' : customer?.email}
                     </span>
-                    <Badge variant="outline" className="text-[9px] h-3.5 px-1 font-normal text-muted-foreground">
-                      Switch
-                    </Badge>
                   </div>
-                  <span className="text-[10px] text-muted-foreground truncate">
-                    {customer?.email}
-                  </span>
-                </div>
-              </SidebarMenuButton>
+                </SidebarMenuButton>
+
+                {!isGuest && (
+                  <button
+                    type="button"
+                    title="Sign out to Guest mode"
+                    onClick={handleSignOut}
+                    className="p-2 rounded-md hover:bg-sidebar-accent text-muted-foreground hover:text-foreground cursor-pointer shrink-0 group-data-[collapsible=icon]:hidden transition-colors"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
@@ -500,7 +539,7 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
                 }}
                 className="w-full h-9 rounded-lg border border-border bg-background px-3 text-xs"
               >
-                {merchants.map((m) => (
+                {Array.from(new Map(merchants.map((m) => [m.id, m])).values()).map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name} ({m.category === 'digital_music' ? 'Digital Music' : 'Groceries'})
                   </option>
@@ -577,76 +616,14 @@ export function ModernAppShell({ children }: { children: React.ReactNode }) {
         </DialogContent>
       </Dialog>
 
-      {/* Switch Demo Persona Dialog */}
-      <Dialog open={isPersonaDialogOpen} onOpenChange={setIsPersonaDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Switch Demo Shopper Persona</DialogTitle>
-            <DialogDescription>
-              Select a persona to test orders, AI customer support conversations, and email simulations under different identities.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col gap-2.5 py-2">
-            {availableCustomers.map((cust) => {
-              const isSelected = cust.id === customer?.id;
-              return (
-                <button
-                  key={cust.id}
-                  type="button"
-                  disabled={isSwitchingPersona}
-                  onClick={() => switchCustomer(cust.id)}
-                  className={`w-full flex items-center gap-3.5 p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                    isSelected
-                      ? 'border-primary bg-primary/10 shadow-xs'
-                      : 'border-border hover:bg-muted/80 bg-card'
-                  }`}
-                >
-                  <Avatar className="h-10 w-10 border border-border shrink-0">
-                    <AvatarImage src={cust.avatarUrl} />
-                    <AvatarFallback className="font-bold text-xs">{cust.name[0]}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-sm text-foreground truncate">{cust.name}</span>
-                      {isSelected && (
-                        <Badge variant="default" className="text-[10px] h-4 px-1.5 font-bold">
-                          Active
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">{cust.email}</p>
-                    <p className="text-[11px] text-muted-foreground/80 truncate mt-0.5">{cust.defaultAddress}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="pt-3 border-t border-border flex items-center justify-between">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                await fetch('/api/seed', { method: 'POST' });
-                await fetchData();
-                window.location.reload();
-              }}
-              className="gap-2 text-xs"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              <span>Reset All Mock Data</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsPersonaDialogOpen(false)}
-            >
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Unified Customer Authentication & Persona Dialog */}
+      <CustomerAuthDialog
+        open={isPersonaDialogOpen}
+        onOpenChange={setIsPersonaDialogOpen}
+        onSuccess={() => {
+          window.location.reload();
+        }}
+      />
     </SidebarProvider>
   );
 }

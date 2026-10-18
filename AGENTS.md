@@ -91,21 +91,46 @@ All integration between storefronts and `tdretail` is purely HTTP REST with CORS
   - Volt Nest (`merchant_b` / `merchant_tech`): `http://localhost:3002` locally, `https://technology-merchant-215785827581.asia-southeast1.run.app` in production.
 - Storefront buttons in Navbar, Layout, and Overview open live external storefronts in a new tab.
 
+### D. Customer Authentication, Guest Isolation & Seamless Conversation Handoff (`tdretail`)
+- **SSR Cookie Session Architecture**:
+  - Customer identity is managed via `tdretail/lib/customerSession.ts` using the secure HTTP-only cookie `td_customer_session` (base64 JSON of `CustomerAuthPayload`: `{ customerId, email, name, isGuest }`) and legacy fallback `td_customer_id`.
+  - Seamlessly bridges Next.js App Router server components (`cookies()`), API routes (`getCurrentCustomer()`), and client shells (`ModernAppShell`).
+- **Dynamic Guest Isolation**:
+  - Unauthenticated visitors receive a unique isolated guest profile (`cust_guest_xxxx`) and isolated guest email (`guest_xxxx@tdretail.guest`).
+  - Ensures shoppers in evaluation or public environments never leak active support threads or order histories to other anonymous visitors.
+- **1-Click Evaluation Personas & Custom Email Sign-In**:
+  - Endpoints: `POST /api/session/login`, `POST /api/session/logout`, `POST /api/session/claim-conversation`, `GET /api/session`.
+  - Supports 1-click persona switching (Sarah Connor, Alex Chen) and custom customer email sign-in/auto-registration.
+  - Dedicated `/login` page supporting `?returnUrl=...` and `?claimConv=...`.
+- **Seamless Conversation Handoff**:
+  - When an anonymous guest signs in or clicks **"Save Chat & Log In"**, `TDStore.claimConversation(conversationId, customer)` atomically rebinds the thread, customer email, and name, appends an audit message, and sets the customer session.
+  - **Full Window Navigation on Handoff**: `CustomerAuthDialog` reloads via `window.location.href = /chat/${handoffConversationId}` to ensure root layout (`ModernAppShell`) SSR-hydrates with the new session cookie, immediately rendering the authenticated customer profile in the active sidebar, listing their inbox conversations, highlighting the active thread, and dismissing guest prompts.
+
 ---
 
 ## 4. Gemini AI Agent Architecture (`tdretail`)
 
 - **Model**: `gemini-3.5-flash-lite` (via `@google/genai`).
-- **Function Calling**:
+  - Generous rate limits and reliable function calling for production and hackathon evaluation.
+- **Function Calling & Tool Response Protocol**:
   - `lookupOrderStatus`: Fetches real verified order data (status, items, license keys, download URLs, courier notes).
   - `requestHumanEscalation`: Triggers ticket escalation and notifies human support specialist.
+  - **Crucial Role Invariant**: In the `@google/genai` SDK, tool responses in `followupContents` MUST use `role: 'tool'` (or `'function'`) with parts `[{ functionResponse: { name, response, id } }]`. Never send `role: 'user'` for function response parts.
+- **History Turn Invariant & Specialist Attribution**:
+  - The history array passed to Gemini must alternate strictly between `user` and `model` (`user -> model -> user -> model`). Consecutive turns with the same role will cause the Gemini API to reject requests with HTTP 400.
+  - **System Audit Filtering**: Internal system audit messages (`m.sender === 'system'`, e.g. "Conversation claimed...") must be filtered out from `contents` so they never create spurious `model` turns.
+  - **Consecutive Turn Merging**: Consecutive user turns or consecutive model turns are merged into a single turn separated by double newlines (`\n\n`).
+  - **Merchant Specialist Messages (`sender: 'human_agent'`)**: Human specialist replies from `/merchant/escalations` are mapped to `role: 'model'` and explicitly attributed with `[Human Support Specialist (${msg.senderName})]: ${text}`. Gemini is instructed via system prompt to treat human specialist actions as authoritative ground truth and cooperate with their decisions.
+- **Dynamic Domain Grounding (Zero Hardcoded Categories)**:
+  - Both live tool responses and fallback engines (`formatDynamicOrderResponse` and `formatDynamicPolicyResponse`) are 100% data-driven.
+  - **Never hardcode merchant categories** (e.g. `if (merchant.category === 'digital_music')`). All responses dynamically format:
+    1. Verified order state: items, quantities, digital license keys, direct vault download links, tracking numbers, carrier names, delivery ETAs, and courier notes.
+    2. Dynamic support policies: dynamically quotes `merchant.supportPolicy.returns`, `refunds`, `deliveryOrDownload`, and `escalationThreshold`.
+  - Seamlessly handles newly registered storefronts onboarded via `/merchant/register` or `POST /api/merchants` with zero code modifications.
 - **Thought Signature & Formatting**:
   - Candidate parts and thought signatures are preserved across turns.
-  - Multi-part text extraction reads from both `response.text` and `firstCandidate.content.parts`.
-- **History Turn Invariant**:
-  - The history array passed to Gemini must alternate strictly between `user` and `model`. Consecutive `user` turns (`user -> user`) will be rejected by the Gemini API with HTTP 400. Always prune duplicate incoming turns before passing history to `ai.models.generateContent`.
-- **Formatting Rule**: Responses use clean Markdown bullet points (`*` or `- `) with double newlines between paragraphs.
-- **Grounded Fallback Engine**: When `GEMINI_API_KEY` is not present or returns HTTP 429 quota exhaustion, `executeGroundedFallbackEngine()` kicks in deterministically to query the database and answer order questions without hallucinations.
+  - Responses strictly use clean Markdown bullet points (`*` or `- `) with double newlines between paragraphs. Never use raw unicode bullet characters (`•`).
+- **Grounded Fallback Engine**: When `GEMINI_API_KEY` is not present or returns HTTP 429 quota exhaustion, `executeGroundedFallbackEngine()` kicks in deterministically to query the database and answer order and policy questions without hallucinations.
 
 ---
 
@@ -138,6 +163,10 @@ All integration between storefronts and `tdretail` is purely HTTP REST with CORS
    - Do **NOT** export `const dynamic = 'force-dynamic'` in layouts when `cacheComponents: true` is configured in `next.config.ts`.
 5. **Suspense Boundaries**:
    - Components using `useSearchParams()` or dynamic router hooks must be wrapped in `<Suspense fallback={...}>`.
+6. **Environment Gating for Developer Test Drawers**:
+   - Developer tooling and mock inspectors (e.g. "Inbound Email & Specialist Tools" drawer in `/chat/[conversationId]`) must be strictly environment-gated: only render on `localhost`, `127.0.0.1`, `NODE_ENV === 'development'`, or when explicit `?dev=1` query parameter is present.
+7. **Unique React Keys**:
+   - Merchant lists and tabs across `/inbox`, `/merchant`, and `ModernAppShell` must be deduplicated by `merchant.id` to prevent React duplicate key runtime warnings.
 
 ---
 

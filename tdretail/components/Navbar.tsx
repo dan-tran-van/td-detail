@@ -222,6 +222,16 @@ export function Navbar() {
 
         {/* Right CTA & Mobile Hamburger Sheet */}
         <div className="flex items-center gap-2 pr-1">
+          <NextLink href="/login" className="hidden sm:inline-flex">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-3 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
+              Sign In
+            </Button>
+          </NextLink>
+
           <NextLink href="/chat/conv_music_01" className="hidden sm:inline-flex">
             <Button
               size="sm"
