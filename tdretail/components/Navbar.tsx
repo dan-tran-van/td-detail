@@ -18,6 +18,7 @@ import {
   ArrowRight,
   Zap,
   Code2,
+  CreditCard,
 } from 'lucide-react';
 import { resolveStorefrontUrl } from '@/lib/storefrontConfig';
 import { Button } from '@/components/ui/button';
@@ -44,34 +45,29 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="fixed top-3 sm:top-4 inset-x-0 z-50 flex justify-center px-3 sm:px-4 pointer-events-none">
-      <header className="pointer-events-auto w-full max-w-5xl rounded-full border border-border/80 bg-background/85 shadow-lg shadow-black/10 backdrop-blur-xl transition-all duration-300 hover:border-border/95 px-3 sm:px-4 py-2 flex items-center justify-between gap-2 sm:gap-4">
+    <div className="fixed top-3 sm:top-4 inset-x-0 z-50 flex justify-center px-3 sm:px-6 pointer-events-none">
+      <header className="pointer-events-auto w-full max-w-7xl rounded-full border border-border/80 bg-background/80 shadow-lg shadow-black/5 backdrop-blur-xl transition-all duration-300 hover:border-border/95 px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3 sm:gap-6">
         {/* Brand Logo & Platform Title */}
-        <div className="flex items-center gap-2.5 sm:gap-3 pl-1 sm:pl-2">
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           <NextLink href="/" className="flex items-center gap-2.5 group">
             <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform text-xs">
               TD
             </div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-sm tracking-tight text-foreground">
-                Retail
-              </span>
-              <span className="text-[10px] uppercase font-semibold text-muted-foreground hidden md:inline px-1.5 py-0.5 rounded-full bg-muted border border-border/50">
-                AI Platform
-              </span>
-            </div>
+            <span className="font-bold text-sm sm:text-base tracking-tight text-foreground">
+              Retail
+            </span>
           </NextLink>
         </div>
 
         {/* Desktop Floating Navigation Menu Links */}
-        <div className="hidden md:flex items-center gap-1">
+        <div className="hidden md:flex items-center gap-1 shrink-0">
           <NavigationMenu>
-            <NavigationMenuList className="gap-1">
+            <NavigationMenuList className="gap-1 sm:gap-1.5">
               {/* Merchants Dropdown */}
               <NavigationMenuItem>
-                <NavigationMenuTrigger className="h-8 px-3 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground bg-transparent hover:bg-muted/60 data-popup-open:bg-muted/80">
-                  <Store className="h-3.5 w-3.5 mr-1" />
-                  <span>Merchants</span>
+                <NavigationMenuTrigger className="h-8 px-3 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground bg-transparent hover:bg-muted/60 data-popup-open:bg-muted/80 whitespace-nowrap shrink-0">
+                  <Store className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                  <span className="whitespace-nowrap">Merchants</span>
                 </NavigationMenuTrigger>
                 <NavigationMenuContent className="p-3 w-80 bg-popover/95 backdrop-blur-md border border-border rounded-2xl shadow-xl">
                   <div className="space-y-2">
@@ -161,14 +157,14 @@ export function Navbar() {
               <NavigationMenuItem>
                 <NavigationMenuLink
                   render={<NextLink href="/inbox" />}
-                  className={`h-8 px-3 rounded-full text-xs font-medium cursor-pointer transition-colors ${
+                  className={`h-8 px-3 rounded-full text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                     pathname?.startsWith('/inbox') || isChatView
                       ? 'bg-muted text-foreground'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                   }`}
                 >
-                  <MessageSquare className="h-3.5 w-3.5 mr-1 inline" />
-                  <span>Chat & Inbox</span>
+                  <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                  <span className="whitespace-nowrap">Chat & Inbox</span>
                 </NavigationMenuLink>
               </NavigationMenuItem>
 
@@ -176,14 +172,32 @@ export function Navbar() {
               <NavigationMenuItem>
                 <NavigationMenuLink
                   render={<NextLink href="/outbox" />}
-                  className={`h-8 px-3 rounded-full text-xs font-medium cursor-pointer transition-colors ${
+                  className={`h-8 px-3 rounded-full text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                     pathname === '/outbox'
                       ? 'bg-muted text-foreground'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                   }`}
                 >
-                  <Mail className="h-3.5 w-3.5 mr-1 inline" />
-                  <span>Outbox</span>
+                  <Mail className="h-3.5 w-3.5 shrink-0" />
+                  <span className="whitespace-nowrap">Outbox</span>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+
+              {/* Pricing & Subscriptions Link */}
+              <NavigationMenuItem>
+                <NavigationMenuLink
+                  render={<NextLink href="/pricing" />}
+                  className={`h-8 px-3 rounded-full text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
+                    pathname === '/pricing'
+                      ? 'bg-muted text-foreground font-semibold'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                  }`}
+                >
+                  <CreditCard className="h-3.5 w-3.5 shrink-0" />
+                  <span className="whitespace-nowrap">Pricing</span>
+                  <Badge variant="secondary" className="text-[9px] py-0 px-1 font-mono text-emerald-500 font-bold ml-0.5">
+                    Free
+                  </Badge>
                 </NavigationMenuLink>
               </NavigationMenuItem>
 
@@ -191,14 +205,14 @@ export function Navbar() {
               <NavigationMenuItem>
                 <NavigationMenuLink
                   render={<NextLink href="/merchant" />}
-                  className={`h-8 px-3 rounded-full text-xs font-medium cursor-pointer transition-colors ${
+                  className={`h-8 px-3 rounded-full text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                     pathname?.startsWith('/merchant')
                       ? 'bg-muted text-foreground font-semibold'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                   }`}
                 >
-                  <Store className="h-3.5 w-3.5 mr-1 inline text-primary" />
-                  <span>Merchant Portal</span>
+                  <Store className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  <span className="whitespace-nowrap">Merchant Portal</span>
                 </NavigationMenuLink>
               </NavigationMenuItem>
 
@@ -206,14 +220,14 @@ export function Navbar() {
               <NavigationMenuItem>
                 <NavigationMenuLink
                   render={<NextLink href="/docs" />}
-                  className={`h-8 px-3 rounded-full text-xs font-medium cursor-pointer transition-colors ${
+                  className={`h-8 px-3 rounded-full text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                     pathname?.startsWith('/docs')
                       ? 'bg-muted text-foreground font-semibold'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                   }`}
                 >
-                  <Code2 className="h-3.5 w-3.5 mr-1 inline" />
-                  <span>API Docs</span>
+                  <Code2 className="h-3.5 w-3.5 shrink-0" />
+                  <span className="whitespace-nowrap">API Docs</span>
                 </NavigationMenuLink>
               </NavigationMenuItem>
             </NavigationMenuList>
@@ -221,12 +235,12 @@ export function Navbar() {
         </div>
 
         {/* Right CTA & Mobile Hamburger Sheet */}
-        <div className="flex items-center gap-2 pr-1">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <NextLink href="/login" className="hidden sm:inline-flex">
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-3 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground"
+              className="h-8 px-3 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground whitespace-nowrap cursor-pointer"
             >
               Sign In
             </Button>
@@ -235,7 +249,7 @@ export function Navbar() {
           <NextLink href="/chat/new?merchantId=merchant_music" className="hidden sm:inline-flex">
             <Button
               size="sm"
-              className="h-8 px-3.5 rounded-full text-xs font-semibold gap-1.5 bg-primary text-primary-foreground shadow-xs hover:opacity-90 transition-all hover:scale-102"
+              className="h-8 px-4 rounded-full text-xs font-semibold gap-1.5 bg-primary text-primary-foreground shadow-xs hover:opacity-90 transition-all hover:scale-102 whitespace-nowrap cursor-pointer"
             >
               <Sparkles className="h-3.5 w-3.5" />
               <span>Launch Demo</span>
@@ -316,6 +330,15 @@ export function Navbar() {
                     >
                       <Mail className="h-4 w-4 text-primary" />
                       <span>Email Outbox & Webhooks</span>
+                    </NextLink>
+
+                    <NextLink
+                      href="/pricing"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-muted transition-colors text-xs font-medium text-foreground"
+                    >
+                      <CreditCard className="h-4 w-4 text-primary" />
+                      <span>Pricing & Plans (Free Beta)</span>
                     </NextLink>
 
                     <NextLink

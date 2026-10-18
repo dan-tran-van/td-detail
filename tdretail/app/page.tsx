@@ -7,7 +7,6 @@ import {
   MessageSquare,
   Mail,
   Disc,
-  ShoppingBag,
   ArrowRight,
   ShieldCheck,
   CheckCircle2,
@@ -25,39 +24,19 @@ import {
   Bot,
   Activity,
   Cpu,
-  Layers2,
   ArrowUpRight,
   Database,
-  KeyRound,
-  FileCheck2,
   Building2,
-  Scale,
-  Gauge,
-  Workflow,
   Network,
   Webhook,
-  Headphones,
-  Sliders,
-  Radio,
-  FileText,
   Boxes,
-  Clock,
-  Sparkle,
-  Copy,
-  Check,
   HelpCircle,
-  BarChart3,
-  GitBranch,
   Star,
-  Quote,
-  Newspaper,
   Send,
-  X,
-  CreditCard,
-  TrendingUp,
-  LineChart,
   Users,
-  Compass,
+  Check,
+  CreditCard,
+  Store,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -65,24 +44,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
-import { Separator } from '@/components/ui/separator';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Customer } from '@/lib/types';
 import DotGrid from '@/components/DotGrid';
 import ShinyText from '@/components/ShinyText';
 import CountUp from '@/components/CountUp';
+import TiltedCard from '@/components/TiltedCard';
+import { LiveConsoleShowcase } from '@/components/LiveConsoleShowcase';
+import { MultiTenantPipeline } from '@/components/MultiTenantPipeline';
+import { OmnichannelRelayVisualizer } from '@/components/OmnichannelRelayVisualizer';
 import { resolveStorefrontUrl } from '@/lib/storefrontConfig';
 
 export default function LandingPage() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [isResetting, setIsResetting] = useState(false);
+
+  // Floating Support Chat State
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
+  const [isSubmittingChat, setIsSubmittingChat] = useState(false);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [chatLog, setChatLog] = useState<Array<{ sender: 'agent' | 'user'; text: string; time: string }>>([
     {
       sender: 'agent',
-      text: "Hello! Welcome to TD Retail Global Support. How can we help orchestrate your multi-storefront customer service today?",
+      text: "Hello! Welcome to TD Retail Platform Support. Ask me anything about our multi-storefront architecture, SLAs, or enterprise subscription tiers.",
       time: 'Just now',
     },
   ]);
@@ -115,45 +101,112 @@ export default function LandingPage() {
     }
   };
 
-  const handleSendSupportMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatMessage.trim()) return;
-    const userText = chatMessage;
-    setChatLog((prev) => [...prev, { sender: 'user', text: userText, time: 'Just now' }]);
+  const sendSupportPrompt = async (textToSend: string) => {
+    if (!textToSend.trim() || isSubmittingChat) return;
+    const userText = textToSend.trim();
     setChatMessage('');
-    setTimeout(() => {
+    setChatLog((prev) => [...prev, { sender: 'user', text: userText, time: 'Just now' }]);
+    setIsSubmittingChat(true);
+
+    try {
+      if (!activeConversationId) {
+        // Create new conversation under merchant_platform
+        const res = await fetch('/api/conversations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            merchantId: 'merchant_platform',
+            subject: 'Platform Support & Plans',
+            initialMessage: userText,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const conv = data.conversation;
+          if (conv?.id) {
+            setActiveConversationId(conv.id);
+          }
+          const aiMsg = data.messages?.find((m: any) => m.sender === 'agent' || m.sender === 'assistant') || data.aiMessage;
+          const replyText =
+            aiMsg?.content ||
+            aiMsg?.text ||
+            "Thank you for contacting TD Retail Support! Our autonomous resolution engine is grounded on our active platform SLAs and subscription documentation.";
+
+          setChatLog((prev) => [
+            ...prev,
+            { sender: 'agent', text: replyText, time: 'Just now' },
+          ]);
+        } else {
+          throw new Error('Failed to create support thread');
+        }
+      } else {
+        // Append message to existing conversation
+        const res = await fetch(`/api/conversations/${activeConversationId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: userText,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const replyText =
+            data.aiMessage?.content ||
+            data.aiMessage?.text ||
+            "Thank you for your response. Our team and resolution engine are monitoring this thread.";
+
+          setChatLog((prev) => [
+            ...prev,
+            { sender: 'agent', text: replyText, time: 'Just now' },
+          ]);
+        } else {
+          throw new Error('Failed to send message');
+        }
+      }
+    } catch (err) {
+      console.error('Chat error:', err);
       setChatLog((prev) => [
         ...prev,
         {
           sender: 'agent',
-          text: "Thank you for reaching out! Our grounded AI agent is standing by. You can also explore live thread triage in the Unified Operations Console.",
+          text: "We received your message! You can also view this thread and manage live responses directly in the Unified Operations Console.",
           time: 'Just now',
         },
       ]);
-    }, 700);
+    } finally {
+      setIsSubmittingChat(false);
+    }
+  };
+
+  const handleSendSupportMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendSupportPrompt(chatMessage);
   };
 
   return (
     <TooltipProvider delay={100}>
       <div className="flex-1 flex flex-col space-y-36 pb-36 relative">
-        {/* 1. Flagship Stripe Hero Section */}
+        {/* 1. Flagship Stripe-Inspired Hero Section */}
         <section className="relative overflow-hidden pt-28 sm:pt-36 md:pt-44 pb-32 border-b border-border/70 bg-background">
           <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
             <div
               className="absolute inset-0 opacity-15"
               style={{
-                backgroundImage: `linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-                                  linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px)`,
+                backgroundImage: `linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+                                  linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)`,
                 backgroundSize: '36px 36px',
                 maskImage: 'radial-gradient(ellipse 75% 65% at 50% 25%, black 40%, transparent 100%)',
                 WebkitMaskImage: 'radial-gradient(ellipse 75% 65% at 50% 25%, black 40%, transparent 100%)',
               }}
             />
 
-            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[900px] md:w-[1300px] h-[580px] bg-gradient-to-r from-blue-700/25 via-indigo-600/25 to-sky-600/25 blur-3xl rounded-full opacity-70" />
-            <div className="absolute top-10 left-1/8 w-[450px] h-[350px] bg-blue-500/15 blur-3xl rounded-full" />
-            <div className="absolute top-8 right-1/8 w-[460px] h-[360px] bg-sky-500/15 blur-3xl rounded-full" />
+            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[900px] md:w-[1300px] h-[580px] bg-gradient-to-r from-blue-700/20 via-indigo-600/20 to-sky-600/20 blur-3xl rounded-full opacity-70" />
+            <div className="absolute top-10 left-1/8 w-[450px] h-[350px] bg-blue-500/10 blur-3xl rounded-full" />
+            <div className="absolute top-8 right-1/8 w-[460px] h-[360px] bg-sky-500/10 blur-3xl rounded-full" />
 
+            {/* Preserved Interactive Hero Background Canvas */}
             <div className="absolute inset-0 opacity-80 pointer-events-auto">
               <DotGrid
                 dotSize={2}
@@ -175,21 +228,28 @@ export default function LandingPage() {
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background pointer-events-none" />
           </div>
 
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center space-y-8">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border/80 bg-background/80 shadow-xs backdrop-blur">
-              <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
-              <ShinyText
-                text="TD Retail Global Cloud • Grounded AI Support Platform"
-                className="text-xs font-semibold"
-                speed={3}
-              />
-              <ChevronRight className="h-3 w-3 text-muted-foreground ml-1" />
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center space-y-10">
+            {/* Clickable Stripe-Style Release Banner */}
+            <div className="inline-flex justify-center">
+              <NextLink
+                href="/pricing"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-border/80 bg-background/80 shadow-xs backdrop-blur hover:bg-muted/70 transition-all group cursor-pointer"
+              >
+                <Badge variant="secondary" className="text-[10px] py-0 px-1.5 font-bold text-primary bg-primary/10 border-0">
+                  Free Beta
+                </Badge>
+                <span className="text-xs font-medium text-foreground">
+                  Autonomous Multi-Merchant Resolution Engine Now Live
+                </span>
+                <ChevronRight className="h-3 w-3 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+              </NextLink>
             </div>
 
+            {/* Headline & Description */}
             <div className="space-y-6 max-w-4xl mx-auto">
               <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-foreground leading-[1.08] drop-shadow-xs">
                 Autonomous customer operations for{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-400">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-indigo-600 to-purple-600">
                   modern enterprise commerce.
                 </span>
               </h1>
@@ -198,39 +258,34 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            {/* Stripe-Grade Focused Hero CTAs */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
               <NextLink href="/chat/new?merchantId=merchant_music">
-                <Button size="lg" className="h-12 px-7 rounded-full gap-2 bg-primary text-primary-foreground font-semibold shadow-md hover:opacity-90 transition-all hover:scale-102">
+                <Button size="lg" className="h-12 px-7 rounded-full gap-2 bg-primary text-primary-foreground font-semibold shadow-md hover:opacity-95 transition-all hover:scale-102 cursor-pointer">
                   <Sparkles className="h-4 w-4" />
                   <span>Launch Live Agent Demo</span>
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </NextLink>
 
-              <NextLink href="/inbox">
-                <Button variant="outline" size="lg" className="h-12 px-6 rounded-full gap-2 border-border backdrop-blur bg-background/60 hover:bg-muted/80 font-medium">
-                  <MessageSquare className="h-4 w-4" />
-                  <span>Unified Operations Console</span>
+              <NextLink href="/pricing">
+                <Button variant="outline" size="lg" className="h-12 px-6 rounded-full gap-2 border-border backdrop-blur bg-background/80 hover:bg-muted font-medium text-foreground cursor-pointer">
+                  <CreditCard className="h-4 w-4 text-primary" />
+                  <span>View Plans & Pricing</span>
                 </Button>
               </NextLink>
 
-              <NextLink href="/docs">
-                <Button variant="outline" size="lg" className="h-12 px-6 rounded-full gap-2 border-border backdrop-blur bg-background/60 hover:bg-muted/80 font-medium text-foreground">
-                  <Code2 className="h-4 w-4 text-primary" />
-                  <span>API Documentation</span>
-                </Button>
+              <NextLink href="/docs" className="sm:ml-2">
+                <span className="text-sm font-medium text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors py-2 cursor-pointer">
+                  <span>API Reference</span>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </span>
               </NextLink>
+            </div>
 
-              <Button
-                variant="ghost"
-                size="lg"
-                onClick={handleResetData}
-                disabled={isResetting}
-                className="h-12 px-5 rounded-full gap-2 text-muted-foreground hover:text-foreground"
-              >
-                <RefreshCw className={`h-4 w-4 ${isResetting ? 'animate-spin' : ''}`} />
-                <span>Reset Sandbox</span>
-              </Button>
+            {/* Interactive Hero Showcase (Replaced Static Image with LiveConsoleShowcase) */}
+            <div className="pt-6 max-w-5xl mx-auto">
+              <LiveConsoleShowcase />
             </div>
 
             {/* Enterprise Performance Strip with Tooltip annotations */}
@@ -249,7 +304,7 @@ export default function LandingPage() {
                     </div>
                   }
                 />
-                <TooltipContent>Strict tool-based facts: agent never invents order IDs or states.</TooltipContent>
+                <TooltipContent>Strict tool-based facts: the engine never invents order IDs or states.</TooltipContent>
               </Tooltip>
 
               <Tooltip>
@@ -257,16 +312,16 @@ export default function LandingPage() {
                   render={
                     <div className="space-y-1 cursor-help group text-center">
                       <div className="text-3xl sm:text-4xl font-black text-foreground group-hover:text-primary transition-colors">
-                        <CountUp to={2} prefix="" suffix=" Brands" duration={1} />
+                        <CountUp to={2} prefix="" suffix=" Stores" duration={1} />
                       </div>
                       <p className="text-xs text-muted-foreground font-medium flex items-center justify-center gap-1">
-                        <span>Connected Stores</span>
+                        <span>Connected Storefronts</span>
                         <HelpCircle className="h-3 w-3 opacity-60" />
                       </p>
                     </div>
                   }
                 />
-                <TooltipContent>Independent storefronts federated into a single tenant controller.</TooltipContent>
+                <TooltipContent>Independent external storefronts federated into a single tenant controller.</TooltipContent>
               </Tooltip>
 
               <Tooltip>
@@ -304,12 +359,24 @@ export default function LandingPage() {
               </Tooltip>
             </div>
 
-            {/* Active Enterprise Session Indicator */}
-            <div className="pt-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Active Enterprise Session:</span>
-              <span className="font-semibold text-foreground">{customer?.name || 'Sarah Connor'}</span>
-              <span className="font-mono text-[11px] text-muted-foreground">({customer?.email || 'sarah.connor@cyberdyne.io'})</span>
+            {/* Active Enterprise Session Indicator & Sandbox Utility */}
+            <div className="pt-3 flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Enterprise Session:</span>
+                <span className="font-semibold text-foreground">{customer?.name || 'Sarah Connor'}</span>
+                <span className="font-mono text-[11px] text-muted-foreground">({customer?.email || 'sarah.connor@example.com'})</span>
+              </span>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={handleResetData}
+                disabled={isResetting}
+                className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground underline underline-offset-4 cursor-pointer transition-colors"
+              >
+                <RefreshCw className={`h-3 w-3 ${isResetting ? 'animate-spin' : ''}`} />
+                <span>Reset Sandbox Seed</span>
+              </button>
             </div>
           </div>
         </section>
@@ -320,36 +387,36 @@ export default function LandingPage() {
             <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">
               Powering customer operations across global multi-merchant networks
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 items-center opacity-70 grayscale hover:grayscale-0 transition-all">
-              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-card border border-border/60">
-                <Disc className="h-4 w-4 text-sky-400" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 items-center opacity-75 grayscale hover:grayscale-0 transition-all">
+              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-card border border-border/60 shadow-xs">
+                <Disc className="h-4 w-4 text-sky-500" />
                 <span className="font-bold text-sm tracking-tight text-foreground">SoundWave</span>
               </div>
-              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-card border border-border/60">
-                <ShoppingBag className="h-4 w-4 text-emerald-400" />
-                <span className="font-bold text-sm tracking-tight text-foreground">FreshCart</span>
+              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-card border border-border/60 shadow-xs">
+                <Zap className="h-4 w-4 text-amber-500" />
+                <span className="font-bold text-sm tracking-tight text-foreground">Volt Nest</span>
               </div>
-              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-card border border-border/60">
-                <Boxes className="h-4 w-4 text-purple-400" />
-                <span className="font-bold text-sm tracking-tight text-foreground">AeroLogix</span>
+              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-card border border-border/60 shadow-xs">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span className="font-bold text-sm tracking-tight text-foreground">TD Platform</span>
               </div>
-              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-card border border-border/60">
-                <Globe2 className="h-4 w-4 text-blue-400" />
-                <span className="font-bold text-sm tracking-tight text-foreground">ApexDirect</span>
+              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-card border border-border/60 shadow-xs">
+                <Boxes className="h-4 w-4 text-purple-500" />
+                <span className="font-bold text-sm tracking-tight text-foreground">PulseAudio</span>
               </div>
-              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-card border border-border/60">
-                <Cpu className="h-4 w-4 text-amber-400" />
-                <span className="font-bold text-sm tracking-tight text-foreground">Cyberdyne</span>
+              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-card border border-border/60 shadow-xs">
+                <Network className="h-4 w-4 text-blue-500" />
+                <span className="font-bold text-sm tracking-tight text-foreground">HyperSync</span>
               </div>
-              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-card border border-border/60">
-                <Layers className="h-4 w-4 text-rose-400" />
-                <span className="font-bold text-sm tracking-tight text-foreground">ZenithHub</span>
+              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-card border border-border/60 shadow-xs">
+                <Server className="h-4 w-4 text-emerald-500" />
+                <span className="font-bold text-sm tracking-tight text-foreground">Cloud Fleet</span>
               </div>
             </div>
           </div>
         </section>
 
-        {/* 3. Connected Merchant Ecosystem: Multi-Merchant Control Plane */}
+        {/* 3. Connected Merchant Ecosystem: Multi-Merchant Control Plane with 3D TiltedCards */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full space-y-12">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div className="space-y-2">
@@ -371,192 +438,242 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Merchant 1: SoundWave Digital Music */}
-            <Card className="border-border/80 bg-card shadow-md hover:border-primary/60 transition-all flex flex-col justify-between overflow-hidden relative group rounded-2xl">
-              <div className="absolute top-0 right-0 w-36 h-36 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors pointer-events-none" />
-              <CardHeader className="p-8 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3.5">
-                    <div className="h-12 w-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-md">
-                      <Disc className="h-6 w-6" />
+            <TiltedCard
+              containerHeight="100%"
+              containerWidth="100%"
+              rotateAmplitude={8}
+              scaleOnHover={1.02}
+              glare={0.3}
+              radius={24}
+              showTooltip={false}
+              className="h-full"
+            >
+              <Card className="h-full border-border/80 bg-card shadow-md hover:border-primary/60 transition-all flex flex-col justify-between overflow-hidden relative group rounded-3xl">
+                <div className="absolute top-0 right-0 w-36 h-36 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors pointer-events-none" />
+                <CardHeader className="p-8 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3.5">
+                      <div className="h-12 w-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-md">
+                        <Disc className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl flex items-center gap-2">
+                          SoundWave Digital
+                          <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </CardTitle>
+                        <CardDescription className="text-xs font-medium">
+                          Lossless Audio & Digital Rights
+                        </CardDescription>
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-xl flex items-center gap-2">
-                        SoundWave Digital
-                        <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </CardTitle>
-                      <CardDescription className="text-xs font-medium">
-                        Lossless Audio & Digital Rights
-                      </CardDescription>
-                    </div>
+                    <Badge variant="secondary" className="text-[11px] font-semibold">
+                      Digital
+                    </Badge>
                   </div>
-                  <Badge variant="secondary" className="text-[11px] font-semibold">
-                    Digital
-                  </Badge>
-                </div>
 
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Autonomous support for digital storefronts. Gemini identifies customer purchases, validates license authenticity, delivers secure stem download links, and resolves key activation issues in real-time.
-                </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Autonomous support for digital storefronts. The resolution engine identifies customer purchases, validates license authenticity, delivers secure stem download links, and resolves key activation issues in real-time.
+                  </p>
 
-                <div className="pt-2 flex flex-wrap gap-2 text-xs">
-                  <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
-                    POST /api/orders
-                  </span>
-                  <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
-                    License Verification
-                  </span>
-                  <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
-                    Zero-Copy Stems
-                  </span>
-                </div>
-              </CardHeader>
-
-              <CardContent className="p-8 pt-0 flex gap-3">
-                <NextLink href="/chat/new?merchantId=merchant_music" className="flex-1">
-                  <Button className="w-full rounded-full gap-2 bg-primary text-primary-foreground font-medium shadow-sm">
-                    <Play className="h-4 w-4" />
-                    <span>Agent Chat</span>
-                  </Button>
-                </NextLink>
-
-                <a
-                  href={resolveStorefrontUrl('music')}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1"
-                >
-                  <Button variant="outline" className="w-full rounded-full gap-2 border-border font-medium bg-background/50 hover:bg-background">
-                    <ExternalLink className="h-4 w-4" />
-                    <span>Storefront</span>
-                  </Button>
-                </a>
-              </CardContent>
-            </Card>
-
-            {/* Merchant 2: Volt Nest (Merchant B) */}
-            <Card className="border-border/80 bg-card shadow-md hover:border-primary/60 transition-all flex flex-col justify-between overflow-hidden relative group rounded-2xl">
-              <div className="absolute top-0 right-0 w-36 h-36 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors pointer-events-none" />
-              <CardHeader className="p-8 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3.5">
-                    <div className="h-12 w-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-md">
-                      <Zap className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-xl flex items-center gap-2">
-                        Volt Nest
-                        <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </CardTitle>
-                      <CardDescription className="text-xs font-medium">
-                        Smart Tech & Fast Chargers
-                      </CardDescription>
-                    </div>
+                  <div className="pt-2 flex flex-wrap gap-2 text-xs">
+                    <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
+                      POST /api/orders
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
+                      License Verification
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
+                      Zero-Copy Stems
+                    </span>
                   </div>
-                  <Badge variant="secondary" className="text-[11px] font-semibold">
-                    Hardware
-                  </Badge>
-                </div>
+                </CardHeader>
 
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Next-generation electronics customer experience. Autonomous support delivers live warranty verification, expedited RMA returns tracking, and intelligent technical troubleshooting.
-                </p>
+                <CardContent className="p-8 pt-0 flex gap-3">
+                  <NextLink href="/chat/new?merchantId=merchant_music" className="flex-1">
+                    <Button className="w-full rounded-full gap-2 bg-primary text-primary-foreground font-medium shadow-sm cursor-pointer">
+                      <Play className="h-4 w-4" />
+                      <span>Agent Chat</span>
+                    </Button>
+                  </NextLink>
 
-                <div className="pt-2 flex flex-wrap gap-2 text-xs">
-                  <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
-                    2-Yr Warranty
-                  </span>
-                  <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
-                    RMA Tracking
-                  </span>
-                  <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
-                    POST /api/merchants
-                  </span>
-                </div>
-              </CardHeader>
+                  <a
+                    href={resolveStorefrontUrl('music')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1"
+                  >
+                    <Button variant="outline" className="w-full rounded-full gap-2 border-border font-medium bg-background hover:bg-muted cursor-pointer">
+                      <ExternalLink className="h-4 w-4" />
+                      <span>Storefront</span>
+                    </Button>
+                  </a>
+                </CardContent>
+              </Card>
+            </TiltedCard>
 
-              <CardContent className="p-8 pt-0 flex gap-3">
-                <NextLink href="/chat/new?merchantId=merchant_b" className="flex-1">
-                  <Button className="w-full rounded-full gap-2 bg-primary text-primary-foreground font-medium shadow-sm">
-                    <Play className="h-4 w-4" />
-                    <span>Agent Chat</span>
-                  </Button>
-                </NextLink>
-
-                <a
-                  href={resolveStorefrontUrl('technology')}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1"
-                >
-                  <Button variant="outline" className="w-full rounded-full gap-2 border-border font-medium bg-background/50 hover:bg-background">
-                    <ExternalLink className="h-4 w-4" />
-                    <span>Storefront</span>
-                  </Button>
-                </a>
-              </CardContent>
-            </Card>
-
-            {/* Merchant 3: FreshCart Direct */}
-            <Card className="border-border/80 bg-card shadow-md hover:border-primary/60 transition-all flex flex-col justify-between overflow-hidden relative group rounded-2xl">
-              <div className="absolute top-0 right-0 w-36 h-36 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors pointer-events-none" />
-              <CardHeader className="p-8 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3.5">
-                    <div className="h-12 w-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-md">
-                      <ShoppingBag className="h-6 w-6" />
+            {/* Merchant 2: Volt Nest (Smart Hardware) */}
+            <TiltedCard
+              containerHeight="100%"
+              containerWidth="100%"
+              rotateAmplitude={8}
+              scaleOnHover={1.02}
+              glare={0.3}
+              radius={24}
+              showTooltip={false}
+              className="h-full"
+            >
+              <Card className="h-full border-border/80 bg-card shadow-md hover:border-primary/60 transition-all flex flex-col justify-between overflow-hidden relative group rounded-3xl">
+                <div className="absolute top-0 right-0 w-36 h-36 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors pointer-events-none" />
+                <CardHeader className="p-8 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3.5">
+                      <div className="h-12 w-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-md">
+                        <Zap className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl flex items-center gap-2">
+                          Volt Nest
+                          <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </CardTitle>
+                        <CardDescription className="text-xs font-medium">
+                          Smart Tech & Fast Chargers
+                        </CardDescription>
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-xl flex items-center gap-2">
-                        FreshCart Direct
-                        <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </CardTitle>
-                      <CardDescription className="text-xs font-medium">
-                        Perishable Goods & Logistics
-                      </CardDescription>
-                    </div>
+                    <Badge variant="secondary" className="text-[11px] font-semibold">
+                      Hardware
+                    </Badge>
                   </div>
-                  <Badge variant="secondary" className="text-[11px] font-semibold">
-                    Physical
-                  </Badge>
-                </div>
 
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Real-time resolution for physical delivery pipelines. Grounded AI monitors courier delivery windows, processes item replacements, and evaluates refund eligibility against cold-chain SLA policies.
-                </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Next-generation electronics customer experience. Autonomous support delivers live warranty verification, expedited RMA returns tracking, and intelligent technical troubleshooting.
+                  </p>
 
-                <div className="pt-2 flex flex-wrap gap-2 text-xs">
-                  <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
-                    Geofencing
-                  </span>
-                  <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
-                    SLA Validation
-                  </span>
-                  <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
-                    Refund Auth
-                  </span>
-                </div>
-              </CardHeader>
+                  <div className="pt-2 flex flex-wrap gap-2 text-xs">
+                    <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
+                      2-Yr Warranty
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
+                      RMA Tracking
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
+                      POST /api/merchants
+                    </span>
+                  </div>
+                </CardHeader>
 
-              <CardContent className="p-8 pt-0 flex gap-3">
-                <NextLink href="/chat/new?merchantId=merchant_grocery" className="flex-1">
-                  <Button className="w-full rounded-full gap-2 bg-primary text-primary-foreground font-medium shadow-sm">
-                    <Play className="h-4 w-4" />
-                    <span>Agent Chat</span>
-                  </Button>
-                </NextLink>
+                <CardContent className="p-8 pt-0 flex gap-3">
+                  <NextLink href="/chat/new?merchantId=merchant_b" className="flex-1">
+                    <Button className="w-full rounded-full gap-2 bg-primary text-primary-foreground font-medium shadow-sm cursor-pointer">
+                      <Play className="h-4 w-4" />
+                      <span>Agent Chat</span>
+                    </Button>
+                  </NextLink>
 
-                <NextLink href="/inbox" className="flex-1">
-                  <Button variant="outline" className="w-full rounded-full gap-2 border-border font-medium bg-background/50 hover:bg-background">
-                    <MessageSquare className="h-4 w-4" />
-                    <span>Inbox</span>
-                  </Button>
-                </NextLink>
-              </CardContent>
-            </Card>
+                  <a
+                    href={resolveStorefrontUrl('technology')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1"
+                  >
+                    <Button variant="outline" className="w-full rounded-full gap-2 border-border font-medium bg-background hover:bg-muted cursor-pointer">
+                      <ExternalLink className="h-4 w-4" />
+                      <span>Storefront</span>
+                    </Button>
+                  </a>
+                </CardContent>
+              </Card>
+            </TiltedCard>
+
+            {/* Merchant 3: TD Retail Platform Support */}
+            <TiltedCard
+              containerHeight="100%"
+              containerWidth="100%"
+              rotateAmplitude={8}
+              scaleOnHover={1.02}
+              glare={0.3}
+              radius={24}
+              showTooltip={false}
+              className="h-full"
+            >
+              <Card className="h-full border-border/80 bg-card shadow-md hover:border-primary/60 transition-all flex flex-col justify-between overflow-hidden relative group rounded-3xl">
+                <div className="absolute top-0 right-0 w-36 h-36 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors pointer-events-none" />
+                <CardHeader className="p-8 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3.5">
+                      <div className="h-12 w-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-md">
+                        <Sparkles className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl flex items-center gap-2">
+                          TD Platform Support
+                          <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </CardTitle>
+                        <CardDescription className="text-xs font-medium">
+                          Architecture, Plans & Enterprise SLAs
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="text-[11px] font-semibold">
+                      Platform
+                    </Badge>
+                  </div>
+
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Official support desk and technical consultation for TD Retail multi-tenant infrastructure, enterprise subscription tiers, dynamic merchant onboarding, and developer APIs.
+                  </p>
+
+                  <div className="pt-2 flex flex-wrap gap-2 text-xs">
+                    <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
+                      Subscription Tiers
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
+                      SLA Guarantees
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground font-mono text-[11px]">
+                      Multi-Tenant Bounds
+                    </span>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="p-8 pt-0 flex gap-3">
+                  <NextLink href="/chat/new?merchantId=merchant_platform" className="flex-1">
+                    <Button className="w-full rounded-full gap-2 bg-primary text-primary-foreground font-medium shadow-sm cursor-pointer">
+                      <Play className="h-4 w-4" />
+                      <span>Platform Chat</span>
+                    </Button>
+                  </NextLink>
+
+                  <NextLink href="/inbox" className="flex-1">
+                    <Button variant="outline" className="w-full rounded-full gap-2 border-border font-medium bg-background hover:bg-muted cursor-pointer">
+                      <MessageSquare className="h-4 w-4" />
+                      <span>Unified Inbox</span>
+                    </Button>
+                  </NextLink>
+                </CardContent>
+              </Card>
+            </TiltedCard>
           </div>
         </section>
 
-        {/* 4. Stripe-Style Bento Grid: Modular Business Solutions */}
+        {/* 4. Interactive Multi-Tenant Architecture Pipeline (Replaced Static Flow Image) */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full space-y-10">
+          <div className="text-center space-y-3 max-w-3xl mx-auto">
+            <Badge variant="outline" className="text-xs uppercase tracking-wider text-primary">
+              System Topography
+            </Badge>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+              Tenant-Isolated Execution Boundaries & Relay Pipeline
+            </h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              External storefronts interface with TD Retail strictly through decoupled REST and webhook protocols. AI tool calls and customer conversations are cryptographically bound to caller merchant identities.
+            </p>
+          </div>
+
+          <MultiTenantPipeline />
+        </section>
+
+        {/* 5. Stripe-Style Bento Grid: Modular Business Solutions (Replaced Static Graphic with OmnichannelRelayVisualizer) */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full space-y-12">
           <div className="space-y-3">
             <Badge variant="outline" className="text-xs uppercase tracking-wider text-primary">
@@ -578,10 +695,10 @@ export default function LandingPage() {
                   Autonomous Workflow
                 </Badge>
                 <h3 className="text-2xl font-bold tracking-tight text-foreground">
-                  Monetize & retain through agentic customer support
+                  Monetize & retain through autonomous customer operations
                 </h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Turn support tickets into revenue opportunities. When shoppers report sizing or compatibility questions, Gemini cross-references live catalog feeds to propose alternatives and issue instant exchange vouchers.
+                  Turn support tickets into retention opportunities. When shoppers report sizing, license, or compatibility questions, the support engine cross-references live catalog feeds to propose alternatives and issue instant solutions.
                 </p>
               </div>
 
@@ -589,7 +706,7 @@ export default function LandingPage() {
               <div className="mt-8 bg-background/90 border border-border/80 rounded-2xl p-5 space-y-3 shadow-lg max-w-md backdrop-blur">
                 <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
                   <Bot className="h-4 w-4 text-primary" />
-                  <span>Agentic Recommendation Stream</span>
+                  <span>Autonomous Recommendation Stream</span>
                 </div>
                 <div className="p-3 rounded-xl bg-muted/60 text-xs text-foreground space-y-1">
                   <p className="font-semibold text-primary">Live Resolution Event #EV-4820</p>
@@ -606,7 +723,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-xl font-bold text-foreground">Unified Shopper Graph</h3>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  Map customer identities across Shopify, custom Next.js storefronts, and mobile apps into one persistent history thread.
+                  Map customer identities across external storefronts, custom Next.js frontends, and mobile channels into one persistent history thread.
                 </p>
               </div>
               <div className="pt-6 border-t border-border/60 flex items-center justify-between text-xs text-muted-foreground">
@@ -625,7 +742,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-xl font-bold text-foreground">Hallucination Firewall</h3>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  Deterministic tool gating ensures the AI never promises discounts, ships unverified orders, or breaches merchant SLA boundaries.
+                  Deterministic tool gating ensures the AI engine never promises unauthorized discounts, mutates unverified orders, or breaches merchant SLA boundaries.
                 </p>
               </div>
               <div className="pt-6 border-t border-border/60 text-xs text-muted-foreground flex items-center gap-2">
@@ -634,29 +751,34 @@ export default function LandingPage() {
               </div>
             </Card>
 
-            {/* Bento Card 4: Global Webhook Network */}
+            {/* Bento Card 4: Global Webhook & Email Relay with Interactive Visualizer */}
             <Card className="md:col-span-2 border-border/80 bg-gradient-to-br from-card via-card to-sky-500/5 rounded-3xl p-8 flex flex-col justify-between">
-              <div className="space-y-3 max-w-lg">
-                <Badge className="bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 border-none font-medium">
-                  Distributed Event Bus
-                </Badge>
-                <h3 className="text-2xl font-bold tracking-tight text-foreground">
-                  Enterprise Webhooks & SendGrid Inbound Relay
-                </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  SendGrid inbound parse webhooks parse reply-to tokens and route email customer responses directly into active chat threads.
-                </p>
-              </div>
-              <div className="pt-6 flex flex-wrap gap-2 text-xs font-mono">
-                <span className="px-3 py-1.5 rounded-lg bg-background border border-border text-foreground">POST /api/webhooks/sendgrid</span>
-                <span className="px-3 py-1.5 rounded-lg bg-background border border-border text-foreground">HMAC-SHA256 Signatures</span>
-                <span className="px-3 py-1.5 rounded-lg bg-background border border-border text-foreground">Idempotent Replay Buffer</span>
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
+                <div className="sm:col-span-6 space-y-3">
+                  <Badge className="bg-sky-500/20 text-sky-600 dark:text-sky-400 hover:bg-sky-500/30 border-none font-medium">
+                    Distributed Event Bus
+                  </Badge>
+                  <h3 className="text-2xl font-bold tracking-tight text-foreground">
+                    Enterprise Webhooks & SendGrid Inbound Relay
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    SendGrid inbound parse webhooks extract reply-to tokens and route email customer responses directly into active chat threads with zero context loss.
+                  </p>
+                  <div className="pt-2 flex flex-wrap gap-2 text-xs font-mono">
+                    <span className="px-3 py-1.5 rounded-lg bg-background border border-border text-foreground">POST /api/webhooks/sendgrid</span>
+                    <span className="px-3 py-1.5 rounded-lg bg-background border border-border text-foreground">HMAC-SHA256 Signatures</span>
+                  </div>
+                </div>
+
+                <div className="sm:col-span-6">
+                  <OmnichannelRelayVisualizer />
+                </div>
               </div>
             </Card>
           </div>
         </section>
 
-        {/* 5. Developer & Architecture Section: Stripe-Style Code Tabs */}
+        {/* 6. Developer & Architecture Section: Stripe-Style Code Tabs */}
         <section className="relative overflow-hidden py-32 border-y border-border/70 bg-background">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full space-y-12 relative z-10">
             <div className="space-y-3">
@@ -681,7 +803,7 @@ export default function LandingPage() {
                   <div className="space-y-1">
                     <h3 className="text-base font-bold text-foreground">Tenant-Isolated Execution Boundaries</h3>
                     <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                      AI tool calls are scoped to the active tenant ID. An agent resolving SoundWave inquiries cannot access or query FreshCart records.
+                      AI tool calls are scoped to the active tenant ID. An agent resolving SoundWave inquiries cannot access or query Volt Nest records.
                     </p>
                   </div>
                 </div>
@@ -693,7 +815,7 @@ export default function LandingPage() {
                   <div className="space-y-1">
                     <h3 className="text-base font-bold text-foreground">Stateless Enterprise Cloud Deployment</h3>
                     <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                      Zero local disk or native runtime lock-in. Fully decoupled architectures deploy natively to Google Cloud Run and high-availability serverless containers.
+                      Zero local disk or native runtime lock-in. Decoupled architectures deploy natively to Google Cloud Run containers in asia-southeast1.
                     </p>
                   </div>
                 </div>
@@ -712,7 +834,7 @@ export default function LandingPage() {
 
                 <div className="pt-2 flex flex-wrap items-center gap-3">
                   <NextLink href="/docs">
-                    <Button size="sm" className="rounded-full gap-2 text-xs bg-primary text-primary-foreground px-4 shadow-sm font-semibold hover:opacity-90 transition-all hover:scale-102">
+                    <Button size="sm" className="rounded-full gap-2 text-xs bg-primary text-primary-foreground px-4 shadow-sm font-semibold hover:opacity-90 transition-all hover:scale-102 cursor-pointer">
                       <Code2 className="h-3.5 w-3.5" />
                       <span>Explore Interactive API Reference</span>
                       <ArrowRight className="h-3 w-3" />
@@ -720,9 +842,9 @@ export default function LandingPage() {
                   </NextLink>
 
                   <NextLink href="/outbox">
-                    <Button variant="outline" size="sm" className="rounded-full gap-2 text-xs border-border px-4 bg-background">
+                    <Button variant="outline" size="sm" className="rounded-full gap-2 text-xs border-border px-4 bg-background cursor-pointer">
                       <Terminal className="h-3.5 w-3.5" />
-                      <span>Inspect Outbox & Webhooks</span>
+                      <span>Inspect Audited Outbox</span>
                     </Button>
                   </NextLink>
                 </div>
@@ -805,7 +927,7 @@ export default function LandingPage() {
                           {'  '}method: <span className="text-emerald-300">&apos;PATCH&apos;</span>,{'\n'}
                           {'  '}headers: {'{\n'}
                           {'    '}<span className="text-emerald-300">&apos;Content-Type&apos;</span>: <span className="text-emerald-300">&apos;application/json&apos;</span>,{'\n'}
-                          {'    '}<span className="text-emerald-300">&apos;x-merchant-id&apos;</span>: <span className="text-emerald-300">&apos;merchant_b&apos;</span> <span className="text-zinc-500">// Tenant security boundary check</span>{'\n'}
+                          {'    '}<span className="text-emerald-300">&apos;x-merchant-id&apos;</span>: <span className="text-emerald-300">&apos;merchant_b&apos;</span> <span className="text-zinc-500">// Tenant boundary check</span>{'\n'}
                           {'  }'},{'\n'}
                           {'  '}body: <span className="text-blue-400">JSON.stringify</span>({'{ \n'}
                           {'    '}orderStatus: <span className="text-emerald-300">&apos;out_for_delivery&apos;</span>,{'\n'}
@@ -819,7 +941,7 @@ export default function LandingPage() {
                       {/* Tab 3: POST /merchants */}
                       <TabsContent value="merchants" className="mt-0">
                         <pre className="space-y-1">
-                          <span className="text-zinc-500">// 3. Onboard merchant with ground-truth AI support policy</span>
+                          <span className="text-zinc-500">// 3. Onboard merchant with ground-truth support policy</span>
                           {'\n'}
                           <span className="text-purple-400">await</span> <span className="text-blue-400">fetch</span>(<span className="text-emerald-300">&apos;/api/merchants&apos;</span>, {'{\n'}
                           {'  '}method: <span className="text-emerald-300">&apos;POST&apos;</span>,{'\n'}
@@ -841,13 +963,13 @@ export default function LandingPage() {
                       {/* Tab 4: POST /conversations */}
                       <TabsContent value="conversations" className="mt-0">
                         <pre className="space-y-1">
-                          <span className="text-zinc-500">// 4. Create support thread & trigger Gemini 3.5 Flash Lite agent</span>
+                          <span className="text-zinc-500">// 4. Create support thread & trigger autonomous resolution engine</span>
                           {'\n'}
                           <span className="text-purple-400">const</span> session = <span className="text-purple-400">await</span> <span className="text-blue-400">fetch</span>(<span className="text-emerald-300">&apos;/api/conversations&apos;</span>, {'{\n'}
                           {'  '}method: <span className="text-emerald-300">&apos;POST&apos;</span>,{'\n'}
                           {'  '}body: <span className="text-blue-400">JSON.stringify</span>({'{ \n'}
                           {'    '}merchantId: <span className="text-emerald-300">&apos;merchant_music&apos;</span>,{'\n'}
-                          {'    '}orderId: <span className="text-emerald-300">&apos;ORD-MUS-8821&apos;</span> <span className="text-zinc-500">// Grounds AI on verified order</span>,{'\n'}
+                          {'    '}orderId: <span className="text-emerald-300">&apos;ORD-MUS-8821&apos;</span> <span className="text-zinc-500">// Grounds engine on verified order</span>,{'\n'}
                           {'    '}subject: <span className="text-emerald-300">&apos;Download link inquiry&apos;</span>,{'\n'}
                           {'    '}initialMessage: <span className="text-emerald-300">&apos;Where can I access my lossless master stems?&apos;</span>{'\n'}
                           {'  }'}),{'\n'}
@@ -862,7 +984,7 @@ export default function LandingPage() {
                           {'\n'}
                           <span className="text-purple-400">export async function</span> <span className="text-blue-400">POST</span>(request: Request) {'{\n'}
                           {'  '}<span className="text-purple-400">const</span> {'{ from, to, subject, text }'} = <span className="text-purple-400">await</span> request.<span className="text-blue-400">json</span>();{'\n'}
-                          {'  '}<span className="text-zinc-500">// Extracts thread ID from reply token in recipient address</span>{'\n'}
+                          {'  '}<span className="text-zinc-500">// Extracts thread ID from tokenized recipient address</span>{'\n'}
                           {'  '}<span className="text-purple-400">const</span> result = <span className="text-purple-400">await</span> EmailService.<span className="text-blue-400">handleInboundEmail</span>({'{ from, to, subject, text }'});{'\n'}
                           {'  '}<span className="text-purple-400">return</span> Response.<span className="text-blue-400">json</span>({'{ success: true, aiReply: result.aiReply }'});{'\n'}
                           {'}'}
@@ -884,7 +1006,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 6. Customer Success & Testimonials Carousel */}
+        {/* 7. Customer Success & Testimonials Carousel */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full space-y-10">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div className="space-y-2">
@@ -906,7 +1028,7 @@ export default function LandingPage() {
               <CarouselNext className="relative inset-auto translate-y-0" />
             </div>
             <CarouselContent className="-ml-4">
-              {/* Testimonial 1 */}
+              {/* Testimonial 1: SoundWave Digital */}
               <CarouselItem className="pl-4 md:basis-1/2 lg:basis-1/3">
                 <Card className="h-full border-border/80 bg-card p-6 flex flex-col justify-between rounded-3xl">
                   <div className="space-y-4">
@@ -916,7 +1038,7 @@ export default function LandingPage() {
                       ))}
                     </div>
                     <p className="text-sm text-foreground leading-relaxed italic">
-                      &ldquo;Before TD Retail, reconciling digital audio license queries took our support agents 8 minutes each. Now, Gemini checks the ledger and issues stem download links in seconds.&rdquo;
+                      &ldquo;Before TD Retail, reconciling digital audio license queries took our support agents 8 minutes each. Now, the resolution engine checks the verified ledger and issues stem download links in seconds.&rdquo;
                     </p>
                   </div>
                   <div className="pt-6 border-t border-border/60 flex items-center gap-3">
@@ -931,7 +1053,7 @@ export default function LandingPage() {
                 </Card>
               </CarouselItem>
 
-              {/* Testimonial 2 */}
+              {/* Testimonial 2: Volt Nest (Hardware) */}
               <CarouselItem className="pl-4 md:basis-1/2 lg:basis-1/3">
                 <Card className="h-full border-border/80 bg-card p-6 flex flex-col justify-between rounded-3xl">
                   <div className="space-y-4">
@@ -941,22 +1063,22 @@ export default function LandingPage() {
                       ))}
                     </div>
                     <p className="text-sm text-foreground leading-relaxed italic">
-                      &ldquo;Cold chain delivery inquiries cannot wait for tomorrow morning. Having instant geofence ETA updates automated by grounded AI saved our customer retention rate.&rdquo;
+                      &ldquo;Hardware RMA inquiries and warranty coverage lookups happen instantaneously. Customer satisfaction scores jumped 34% within the first month of deployment.&rdquo;
                     </p>
                   </div>
                   <div className="pt-6 border-t border-border/60 flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-500 text-sm">
-                      FC
+                    <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center font-bold text-amber-500 text-sm">
+                      VN
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-foreground">Elena Rostova</p>
-                      <p className="text-[11px] text-muted-foreground">VP Operations, FreshCart Direct</p>
+                      <p className="text-xs font-bold text-foreground">Kaitlyn Zhao</p>
+                      <p className="text-[11px] text-muted-foreground">Head of Customer Experience, Volt Nest</p>
                     </div>
                   </div>
                 </Card>
               </CarouselItem>
 
-              {/* Testimonial 3 */}
+              {/* Testimonial 3: AeroLogix Network */}
               <CarouselItem className="pl-4 md:basis-1/2 lg:basis-1/3">
                 <Card className="h-full border-border/80 bg-card p-6 flex flex-col justify-between rounded-3xl">
                   <div className="space-y-4">
@@ -984,7 +1106,7 @@ export default function LandingPage() {
           </Carousel>
         </section>
 
-        {/* 7. Case Study Impact Numbers */}
+        {/* 8. Case Study Impact Numbers */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="rounded-3xl border border-border/80 bg-gradient-to-r from-card via-card to-primary/5 p-8 sm:p-12">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left divide-y md:divide-y-0 md:divide-x divide-border/60">
@@ -994,7 +1116,7 @@ export default function LandingPage() {
                 </div>
                 <h4 className="text-base font-bold text-foreground">First-Contact Resolution</h4>
                 <p className="text-xs text-muted-foreground">
-                  Customer issues resolved by AI tools without needing human operator escalation.
+                  Customer issues resolved autonomously without needing human operator escalation.
                 </p>
               </div>
 
@@ -1004,7 +1126,7 @@ export default function LandingPage() {
                 </div>
                 <h4 className="text-base font-bold text-foreground">Average Handle Time</h4>
                 <p className="text-xs text-muted-foreground">
-                  Automated order ledger queries eliminate manual database lookup delays.
+                  Automated order queries eliminate manual database lookup delays.
                 </p>
               </div>
 
@@ -1014,14 +1136,14 @@ export default function LandingPage() {
                 </div>
                 <h4 className="text-base font-bold text-foreground">Tool Precision Reliability</h4>
                 <p className="text-xs text-muted-foreground">
-                  Rigorous JSON schema validation on every Google Gemini tool call execution.
+                  Rigorous JSON schema validation on every tool call execution.
                 </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* 8. Stripe-Style News & Platform Updates */}
+        {/* 9. Stripe-Style News & Platform Updates */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full space-y-8">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
@@ -1033,8 +1155,8 @@ export default function LandingPage() {
               </h2>
             </div>
             <NextLink href="/outbox">
-              <Button variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground hover:text-foreground">
-                <span>View Changelog</span>
+              <Button variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground hover:text-foreground cursor-pointer">
+                <span>View Audited Outbox</span>
                 <ChevronRight className="h-3.5 w-3.5" />
               </Button>
             </NextLink>
@@ -1049,7 +1171,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-base font-bold text-foreground">Zero-Copy Digital License Distribution</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Support agents can now distribute cryptographically signed master stem links with expiry timestamps directly in conversation replies.
+                  Support specialists and automated workflows can now distribute cryptographically signed master stem links with expiry timestamps directly in conversation replies.
                 </p>
               </div>
               <div className="pt-2 flex items-center gap-1 text-xs font-semibold text-primary">
@@ -1094,7 +1216,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 9. Enterprise FAQ Accordion (Modeled after Stripe.com FAQ) */}
+        {/* 10. Enterprise FAQ Accordion */}
         <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 w-full space-y-8">
           <div className="text-center space-y-2">
             <Badge variant="outline" className="text-xs uppercase tracking-wider text-primary">
@@ -1104,7 +1226,7 @@ export default function LandingPage() {
               Frequently asked architectural questions
             </h2>
             <p className="text-sm text-muted-foreground">
-              Common questions about multi-tenant security, Gemini tool grounding, and webhook dispatch.
+              Common questions about multi-tenant security, tool grounding, and webhook dispatch.
             </p>
           </div>
 
@@ -1114,7 +1236,7 @@ export default function LandingPage() {
                 How does TD Retail prevent cross-tenant data leakage?
               </AccordionTrigger>
               <AccordionContent className="px-6 pb-6 text-sm text-muted-foreground leading-relaxed">
-                Every customer interaction initiates with a verified tenant context. All tool declarations sent to Google Gemini strictly inject the session&apos;s <code>merchantId</code> into function execution parameters, guaranteeing that queries cannot inspect or mutate records belonging to any other merchant storefront.
+                Every customer interaction initiates with a verified tenant context. All tool declarations sent to the autonomous resolution engine strictly inject the session&apos;s <code>merchantId</code> into function execution parameters, guaranteeing that queries cannot inspect or mutate records belonging to any other merchant storefront.
               </AccordionContent>
             </AccordionItem>
 
@@ -1123,7 +1245,7 @@ export default function LandingPage() {
                 How is hallucination avoided during order inquiries?
               </AccordionTrigger>
               <AccordionContent className="px-6 pb-6 text-sm text-muted-foreground leading-relaxed">
-                The AI model has no direct database access and is instructed with negative constraints. Whenever order status, fulfillment tracking, or license keys are referenced, Gemini is required to invoke deterministic server-side tools (<code>lookupOrderStatus</code>, <code>executeOrderAction</code>) and ground its final response exclusively on the validated JSON payload.
+                The resolution engine has no direct database access and is instructed with negative constraints. Whenever order status, fulfillment tracking, or license keys are referenced, the engine is required to invoke deterministic server-side tools (<code>lookupOrderStatus</code>, <code>requestHumanEscalation</code>) and ground its final response exclusively on the validated JSON payload.
               </AccordionContent>
             </AccordionItem>
 
@@ -1147,7 +1269,7 @@ export default function LandingPage() {
           </Accordion>
         </section>
 
-        {/* 10. Production Reliability & SLA Assurance */}
+        {/* 11. Production Reliability & Compliance Standards */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <Card className="border-border/80 bg-card/90 shadow-md rounded-2xl">
             <CardHeader className="p-8 pb-4">
@@ -1176,7 +1298,7 @@ export default function LandingPage() {
                   <div className="space-y-0.5">
                     <span className="font-semibold text-foreground">Deterministic Function Calling</span>
                     <p className="text-[11px] text-muted-foreground">
-                      Strict schema validation on tools lookupOrderStatus and executeOrderAction.
+                      Strict schema validation on tools lookupOrderStatus and requestHumanEscalation.
                     </p>
                   </div>
                 </div>
@@ -1195,14 +1317,51 @@ export default function LandingPage() {
           </Card>
         </section>
 
-        {/* 11. Stripe-Style Floating "Chat Now" Customer Support Widget */}
+        {/* 12. Stripe-Grade Bottom Conversion Section */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="rounded-3xl border border-border/80 bg-gradient-to-b from-card via-card/90 to-background p-8 sm:p-12 md:p-16 text-center space-y-6 shadow-xl relative overflow-hidden">
+            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/10 blur-3xl rounded-full pointer-events-none" />
+            <Badge variant="outline" className="text-xs uppercase tracking-wider text-primary">
+              Ready to Deploy
+            </Badge>
+            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground max-w-2xl mx-auto leading-tight">
+              Automate customer operations for your storefront today.
+            </h2>
+            <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">
+              Connect external storefronts via standardized REST APIs with zero persistent vendor lock-in. Active developer tier is 100% free with zero credit card required.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <NextLink href="/merchant/register">
+                <Button size="lg" className="h-12 px-7 rounded-full gap-2 bg-primary text-primary-foreground font-semibold shadow-md hover:opacity-95 transition-all hover:scale-102 cursor-pointer">
+                  <Store className="h-4 w-4" />
+                  <span>Register Your Storefront Free</span>
+                  <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              </NextLink>
+              <NextLink href="/pricing">
+                <Button variant="outline" size="lg" className="h-12 px-6 rounded-full gap-2 border-border font-medium bg-background hover:bg-muted cursor-pointer">
+                  <CreditCard className="h-4 w-4 text-primary" />
+                  <span>Compare All Plans</span>
+                </Button>
+              </NextLink>
+              <NextLink href="/chat/new?merchantId=merchant_music">
+                <Button variant="ghost" size="lg" className="h-12 px-6 rounded-full gap-2 text-muted-foreground hover:text-foreground cursor-pointer">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span>Try Demo Chat</span>
+                </Button>
+              </NextLink>
+            </div>
+          </div>
+        </section>
+
+        {/* 13. Stripe-Style Floating "Chat Now" Support Widget (Suggested prompt chips removed) */}
         <div className="fixed bottom-6 right-6 z-50">
           <Dialog open={chatOpen} onOpenChange={setChatOpen}>
             <DialogTrigger
               render={
                 <Button
                   size="lg"
-                  className="h-12 px-5 rounded-full shadow-2xl bg-zinc-900 text-zinc-100 hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 border border-border flex items-center gap-2.5 font-semibold transition-all hover:scale-105"
+                  className="h-12 px-5 rounded-full shadow-2xl bg-zinc-900 text-zinc-100 hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 border border-border flex items-center gap-2.5 font-semibold transition-all hover:scale-105 cursor-pointer"
                 >
                   <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span>Chat now</span>
@@ -1217,10 +1376,28 @@ export default function LandingPage() {
                     TD
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm leading-none">TD Retail Global Support</h3>
+                    <h3 className="font-bold text-sm leading-none">TD Retail Platform Support</h3>
                     <p className="text-[11px] text-primary-foreground/80 mt-1">Autonomous Customer Desk • Online</p>
                   </div>
                 </div>
+
+                {activeConversationId ? (
+                  <NextLink
+                    href={`/chat/${activeConversationId}`}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-foreground hover:underline bg-primary-foreground/10 px-2.5 py-1 rounded-full transition-colors"
+                  >
+                    <span>Open in Inbox</span>
+                    <ArrowUpRight className="h-3 w-3" />
+                  </NextLink>
+                ) : (
+                  <NextLink
+                    href="/inbox"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-foreground hover:underline bg-primary-foreground/10 px-2.5 py-1 rounded-full transition-colors"
+                  >
+                    <span>All Chats</span>
+                    <ArrowUpRight className="h-3 w-3" />
+                  </NextLink>
+                )}
               </div>
 
               {/* Chat Log Body */}
@@ -1242,18 +1419,33 @@ export default function LandingPage() {
                     <span className="text-[10px] text-muted-foreground mt-1 px-1">{msg.time}</span>
                   </div>
                 ))}
+
+                {isSubmittingChat && (
+                  <div className="flex flex-col items-start">
+                    <div className="p-3 rounded-2xl bg-card border border-border text-muted-foreground rounded-tl-xs shadow-xs flex items-center gap-2">
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin text-primary" />
+                      <span>Support Specialist is thinking...</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Chat Input Field */}
+              {/* Chat Input Field (Suggested prompt chips removed) */}
               <form onSubmit={handleSendSupportMessage} className="p-3 border-t border-border flex items-center gap-2 bg-card">
                 <input
                   type="text"
                   value={chatMessage}
                   onChange={(e) => setChatMessage(e.target.value)}
-                  placeholder="Ask TD Retail support anything..."
-                  className="flex-1 bg-muted/60 border border-border text-xs rounded-full px-4 py-2.5 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground"
+                  placeholder="Ask platform support anything..."
+                  disabled={isSubmittingChat}
+                  className="flex-1 bg-muted/60 border border-border text-xs rounded-full px-4 py-2.5 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground disabled:opacity-50"
                 />
-                <Button type="submit" size="sm" className="rounded-full h-9 w-9 p-0 bg-primary text-primary-foreground">
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isSubmittingChat || !chatMessage.trim()}
+                  className="rounded-full h-9 w-9 p-0 bg-primary text-primary-foreground disabled:opacity-50 cursor-pointer"
+                >
                   <Send className="h-4 w-4" />
                 </Button>
               </form>
@@ -1264,6 +1456,3 @@ export default function LandingPage() {
     </TooltipProvider>
   );
 }
-
-
-

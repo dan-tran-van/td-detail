@@ -27,6 +27,8 @@ import {
   Paperclip,
   X,
   PanelLeft,
+  Zap,
+  Sparkles,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -58,13 +60,9 @@ export default function GmailStyleOutboxPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFolder, setActiveFolder] = useState<'sent' | 'all' | 'starred'>('sent');
-  const [showAllSystemEmails, setShowAllSystemEmails] = useState(false);
+  const [selectedPersona, setSelectedPersona] = useState<'all' | 'sarah' | 'alex'>('all');
   const [mailboxSidebarOpen, setMailboxSidebarOpen] = useState(true);
   const [starredIds, setStarredIds] = useState<Record<string, boolean>>({});
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [availableCustomers, setAvailableCustomers] = useState<Customer[]>([]);
-  const [isPersonaDialogOpen, setIsPersonaDialogOpen] = useState(false);
-  const [isSwitchingPersona, setIsSwitchingPersona] = useState(false);
   const [totalSystemCount, setTotalSystemCount] = useState(0);
 
   // Reply simulation modal state
@@ -101,52 +99,14 @@ export default function GmailStyleOutboxPage() {
     });
   };
 
-  const loadSession = async () => {
-    try {
-      const urlQuery = typeof window !== 'undefined' ? window.location.search : '';
-      const res = await fetch(`/api/session${urlQuery}`);
-      if (res.ok) {
-        const data = await res.json();
-        setCustomer(data.customer);
-        setAvailableCustomers(data.availableCustomers || []);
-      }
-    } catch (e) {
-      console.error('Error fetching session in outbox:', e);
-    }
-  };
-
-  const switchCustomer = async (customerId: string) => {
-    try {
-      setIsSwitchingPersona(true);
-      document.cookie = `td_customer_id=${customerId}; path=/; max-age=604800`;
-      const res = await fetch('/api/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerId }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.customer) {
-          setCustomer(data.customer);
-        }
-        setIsPersonaDialogOpen(false);
-        await loadEmails();
-      }
-    } catch (e) {
-      console.error('Error switching persona:', e);
-    } finally {
-      setIsSwitchingPersona(false);
-    }
-  };
-
   const loadEmails = async () => {
     try {
       setLoading(true);
-      const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-      const queryEmail = urlParams.get('customerEmail');
-      let url = showAllSystemEmails ? '/api/outbox?all=true' : '/api/outbox';
-      if (!showAllSystemEmails && queryEmail) {
-        url += `${url.includes('?') ? '&' : '?'}customerEmail=${encodeURIComponent(queryEmail)}`;
+      let url = '/api/outbox';
+      if (selectedPersona === 'sarah') {
+        url += '?persona=sarah.connor@example.com';
+      } else if (selectedPersona === 'alex') {
+        url += '?persona=alex.chen@example.com';
       }
       const res = await fetch(url, { cache: 'no-store' });
       if (res.ok) {
@@ -164,12 +124,8 @@ export default function GmailStyleOutboxPage() {
   };
 
   useEffect(() => {
-    loadSession();
-  }, []);
-
-  useEffect(() => {
     loadEmails();
-  }, [showAllSystemEmails]);
+  }, [selectedPersona]);
 
   const toggleStar = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -307,37 +263,51 @@ export default function GmailStyleOutboxPage() {
         </div>
 
         {/* Action Controls & Persona Filter */}
+        {/* Action Controls & Demo Persona Filter */}
         <div className="flex items-center gap-1.5 sm:gap-2 ml-auto sm:ml-0">
-          {/* Persona / All Mail Toggle */}
+          {/* Persona Filter: Only Demo Personas */}
           <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/50 text-[11px]">
             <button
               type="button"
               onClick={() => {
-                setShowAllSystemEmails(false);
+                setSelectedPersona('all');
                 setSelectedEmail(null);
               }}
-              className={`px-2 py-1 rounded-md font-medium transition-colors ${
-                !showAllSystemEmails
-                  ? 'bg-background text-foreground shadow-xs'
+              className={`px-2 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                selectedPersona === 'all'
+                  ? 'bg-background text-foreground shadow-xs font-semibold'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              My Mail
+              All Demo ({totalSystemCount})
             </button>
             <button
               type="button"
               onClick={() => {
-                setShowAllSystemEmails(true);
+                setSelectedPersona('sarah');
                 setSelectedEmail(null);
               }}
-              className={`px-2 py-1 rounded-md font-medium transition-colors ${
-                showAllSystemEmails
-                  ? 'bg-background text-foreground shadow-xs'
+              className={`px-2 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                selectedPersona === 'sarah'
+                  ? 'bg-background text-foreground shadow-xs font-semibold'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
-              title="View all outgoing emails across all shoppers"
             >
-              All Outbox ({totalSystemCount})
+              Sarah Connor
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedPersona('alex');
+                setSelectedEmail(null);
+              }}
+              className={`px-2 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                selectedPersona === 'alex'
+                  ? 'bg-background text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Alex Chen
             </button>
           </div>
 
@@ -346,39 +316,18 @@ export default function GmailStyleOutboxPage() {
             size="sm"
             onClick={loadEmails}
             disabled={loading}
-            className="h-8 gap-1.5 text-xs rounded-lg px-2 sm:px-3"
+            className="h-8 gap-1.5 text-xs rounded-lg px-2 sm:px-3 cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Refresh</span>
           </Button>
 
           <NextLink href="/inbox">
-            <Button size="sm" variant="secondary" className="h-8 gap-1.5 text-xs rounded-lg px-2 sm:px-3">
+            <Button size="sm" variant="secondary" className="h-8 gap-1.5 text-xs rounded-lg px-2 sm:px-3 cursor-pointer">
               <Inbox className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Back to Chat</span>
+              <span className="hidden sm:inline">Console</span>
             </Button>
           </NextLink>
-
-          {/* Persona Switcher in Outbox */}
-          <button
-            type="button"
-            onClick={() => setIsPersonaDialogOpen(true)}
-            className="flex items-center gap-1.5 p-1 pl-1.5 pr-2 rounded-full hover:bg-muted/80 border border-border transition-colors text-left outline-none cursor-pointer"
-            title="Switch Persona to filter Outbox for another customer"
-          >
-            <Avatar className="h-6 w-6 border border-border">
-              <AvatarImage src={customer?.avatarUrl} />
-              <AvatarFallback className="text-[10px] bg-muted font-bold">
-                {customer?.name?.charAt(0) || 'C'}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-xs font-semibold text-foreground hidden md:inline max-w-[90px] truncate">
-              {customer?.name || 'Customer'}
-            </span>
-            <Badge variant="outline" className="text-[9px] h-3.5 px-1 font-normal text-muted-foreground">
-              Switch
-            </Badge>
-          </button>
         </div>
       </header>
 
@@ -600,7 +549,7 @@ export default function GmailStyleOutboxPage() {
                   </div>
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
                     This notification set the header <code className="bg-background px-1 py-0.5 rounded border border-border font-mono text-foreground">{selectedEmail.replyTo}</code>.
-                    When the customer responds via their standard email app, SendGrid's Inbound Parse webhook decodes the conversation identifier, appends the response to the customer's chat, and triggers the Gemini agent to formulate the resolution.
+                    When the customer responds via their standard email app, SendGrid's Inbound Parse webhook decodes the conversation identifier, appends the response to the customer's chat, and triggers the autonomous resolution engine to formulate the resolution.
                   </p>
                 </div>
               </div>
@@ -609,13 +558,26 @@ export default function GmailStyleOutboxPage() {
             /* Gmail Table-Style Email List */
             <div className="flex-1 flex flex-col h-full overflow-hidden">
               {/* List Header / Filter bar */}
-              <div className="h-10 border-b border-border/80 px-4 flex items-center justify-between text-xs text-muted-foreground bg-card/20 shrink-0">
-                <div className="flex items-center gap-3">
-                  <span className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
-                    {activeFolder === 'sent' ? 'Sent Notifications' : activeFolder === 'starred' ? 'Starred Messages' : 'All Messages'} ({filteredEmails.length})
+              <div className="border-b border-border/80 px-4 py-2 flex flex-col gap-2 bg-card/20 shrink-0">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
+                      {activeFolder === 'sent' ? 'Sent Notifications' : activeFolder === 'starred' ? 'Starred Messages' : 'All Messages'} ({filteredEmails.length})
+                    </span>
+                    <Badge variant="outline" className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
+                      Demo Personas Only
+                    </Badge>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground hidden sm:inline">Active user session data protected</span>
+                </div>
+
+                {/* Privacy Shield Banner */}
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[11px] leading-relaxed">
+                  <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <span>
+                    <strong>Demo Audit Sandbox:</strong> Displays email logs exclusively for verified demo personas (Sarah Connor & Alex Chen). Active customer session communications are dispatched privately via SendGrid and strictly excluded.
                   </span>
                 </div>
-                <span>Showing latest first</span>
               </div>
 
               {/* Scrollable Email Row Items */}
@@ -657,8 +619,12 @@ export default function GmailStyleOutboxPage() {
 
                         {/* Recipient / Merchant */}
                         <div className="w-28 sm:w-48 md:w-56 shrink-0 flex items-center gap-2 truncate">
-                          {isMusic ? (
+                          {email.merchantId === 'merchant_music' ? (
                             <Disc className="h-3.5 w-3.5 text-primary shrink-0" />
+                          ) : email.merchantId === 'merchant_b' ? (
+                            <Zap className="h-3.5 w-3.5 text-primary shrink-0" />
+                          ) : email.merchantId === 'merchant_platform' ? (
+                            <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
                           ) : (
                             <ShoppingBag className="h-3.5 w-3.5 text-primary shrink-0" />
                           )}
@@ -756,64 +722,6 @@ export default function GmailStyleOutboxPage() {
                 <span>Send Email Reply</span>
               </Button>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Switch Demo Persona Dialog in Outbox */}
-      <Dialog open={isPersonaDialogOpen} onOpenChange={setIsPersonaDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Switch Demo Shopper Persona</DialogTitle>
-            <DialogDescription>
-              Select a persona to test orders, AI customer support conversations, and email simulations under different identities.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col gap-2.5 py-2">
-            {availableCustomers.map((cust) => {
-              const isSelected = cust.id === customer?.id;
-              return (
-                <button
-                  key={cust.id}
-                  type="button"
-                  disabled={isSwitchingPersona}
-                  onClick={() => switchCustomer(cust.id)}
-                  className={`w-full flex items-center gap-3.5 p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                    isSelected
-                      ? 'border-primary bg-primary/10 shadow-xs'
-                      : 'border-border hover:bg-muted/80 bg-card'
-                  }`}
-                >
-                  <Avatar className="h-10 w-10 border border-border shrink-0">
-                    <AvatarImage src={cust.avatarUrl} />
-                    <AvatarFallback className="font-bold text-xs">{cust.name[0]}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-sm text-foreground truncate">{cust.name}</span>
-                      {isSelected && (
-                        <Badge variant="default" className="text-[10px] h-4 px-1.5 font-bold">
-                          Active
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">{cust.email}</p>
-                    <p className="text-[11px] text-muted-foreground/80 truncate mt-0.5">{cust.defaultAddress}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="pt-3 border-t border-border flex items-center justify-end">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsPersonaDialogOpen(false)}
-            >
-              Close
-            </Button>
           </div>
         </DialogContent>
       </Dialog>

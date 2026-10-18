@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ModernAppShell } from '@/components/ModernAppShell';
-import { Sparkles, MessageSquare, Mail, Terminal, Disc, ShoppingBag, ExternalLink, ShieldCheck, Zap } from 'lucide-react';
+import { Sparkles, MessageSquare, Mail, Terminal, Disc, ShoppingBag, ExternalLink, ShieldCheck, Zap, CreditCard } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { resolveStorefrontUrl } from '@/lib/storefrontConfig';
 
@@ -42,6 +42,15 @@ function ShellContent({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Documentation has its own dedicated developer layout without the marketing navbar
+  if (pathname?.startsWith('/docs')) {
+    return (
+      <main className="min-h-screen w-full flex flex-col bg-background text-foreground">
+        {children}
+      </main>
+    );
+  }
+
   return (
     <>
       <Navbar />
@@ -64,7 +73,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
                   TD Retail Platform
                 </span>
                 <Badge variant="outline" className="text-[10px] px-2 py-0.5">
-                  v2.5 Gemini Flash
+                  Autonomous Engine
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed max-w-sm">
@@ -102,6 +111,12 @@ function ShellContent({ children }: { children: React.ReactNode }) {
                   <NextLink href="/outbox" className="hover:text-foreground transition-colors flex items-center gap-1.5">
                     <Mail className="h-3 w-3" />
                     Email Outbox
+                  </NextLink>
+                </li>
+                <li>
+                  <NextLink href="/pricing" className="hover:text-foreground transition-colors flex items-center gap-1.5">
+                    <CreditCard className="h-3 w-3 text-primary" />
+                    Pricing & Plans (Free Beta)
                   </NextLink>
                 </li>
                 <li>
@@ -182,7 +197,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
                 </li>
                 <li>
                   <NextLink href="/docs/conversations" className="hover:text-foreground transition-colors">
-                    Gemini AI Agent
+                    Resolution AI Engine
                   </NextLink>
                 </li>
                 <li>

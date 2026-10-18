@@ -140,7 +140,7 @@ export default function MerchantRegisterPage() {
           Register New Merchant Storefront
         </h1>
         <p className="text-xs text-muted-foreground">
-          Onboard your store into TD Retail, configure Gemini AI support policies, and access merchant operations.
+          Onboard your store into TD Retail, configure autonomous support policies, and access merchant operations.
         </p>
       </div>
 
@@ -157,7 +157,7 @@ export default function MerchantRegisterPage() {
                   1. Store Identity
                 </TabsTrigger>
                 <TabsTrigger value="ai_policy" className="text-xs">
-                  2. Gemini AI Policy
+                  2. Support Policy
                 </TabsTrigger>
                 <TabsTrigger value="account" className="text-xs">
                   3. Staff Access
@@ -303,7 +303,7 @@ export default function MerchantRegisterPage() {
               </div>
             )}
 
-            {/* TAB 2: Gemini AI Policy */}
+            {/* TAB 2: Resolution Policy */}
             {activeTab === 'ai_policy' && (
               <div className="space-y-4">
                 <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 text-xs text-muted-foreground flex items-start gap-2.5">
@@ -311,7 +311,7 @@ export default function MerchantRegisterPage() {
                   <div>
                     <span className="font-semibold text-foreground">Ground-Truth Policy Engine</span>
                     <p className="mt-0.5">
-                      These policy rules are injected directly into Gemini 2.5 Flash&apos;s system prompt. The AI strictly obeys these rules when handling customer returns and disputes.
+                      These policy rules are injected directly into the resolution engine&apos;s system prompt. The agent strictly obeys these rules when handling customer returns and disputes.
                     </p>
                   </div>
                 </div>

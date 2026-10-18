@@ -227,7 +227,7 @@ print(res.json())`,
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-foreground font-bold text-sm">
                 <Bot className="h-4 w-4 text-primary" />
-                <span>Conversations & Gemini Agent API</span>
+                <span>Conversations & Resolution Engine API</span>
               </div>
               <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
             </div>

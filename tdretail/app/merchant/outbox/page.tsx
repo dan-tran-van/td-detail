@@ -79,7 +79,7 @@ export default function MerchantOutboxPage() {
       });
 
       if (res.ok) {
-        setSimulationMessage('Inbound reply webhook successfully processed! Gemini has processed the reply.');
+        setSimulationMessage('Inbound reply webhook successfully processed! Reply processed by resolution engine.');
         setTimeout(() => fetchOutbox(), 1000);
       } else {
         const errData = await res.json().catch(() => ({}));
@@ -110,10 +110,10 @@ export default function MerchantOutboxPage() {
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
             <Mail className="h-5 w-5 text-primary" />
-            Gemini AI Outbound Email Audit
+            Autonomous Outbound Email Audit
           </h1>
           <p className="text-xs text-muted-foreground">
-            Audit customer emails dispatched by Gemini AI and SendGrid on behalf of your storefront.
+            Audit customer emails dispatched by autonomous support and SendGrid on behalf of your storefront.
           </p>
         </div>
 
@@ -175,7 +175,7 @@ export default function MerchantOutboxPage() {
                   <td colSpan={6} className="py-12 text-center text-xs text-muted-foreground space-y-1">
                     <p className="font-medium text-foreground">No sent emails recorded yet</p>
                     <p className="text-[11px]">
-                      When customers receive Gemini AI resolutions or order notifications, copies appear here.
+                      When customers receive automated resolutions or order notifications, copies appear here.
                     </p>
                   </td>
                 </tr>

@@ -145,7 +145,7 @@ export default function MerchantEscalationsPage() {
             Human Support Escalation Center
           </h1>
           <p className="text-xs text-muted-foreground">
-            Customer inquiries escalated by Gemini requiring merchant intervention, refunds, or manual courier exceptions.
+            Customer inquiries flagged for human intervention, refunds, or manual courier exceptions.
           </p>
         </div>
 
@@ -196,7 +196,7 @@ export default function MerchantEscalationsPage() {
                 <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto opacity-80" />
                 <p className="font-medium text-foreground">No pending escalations!</p>
                 <p className="text-[11px]">
-                  All current customer support requests have been successfully handled by Gemini AI.
+                  All current customer support requests have been successfully handled by automated resolution.
                 </p>
               </div>
             ) : (
@@ -364,7 +364,7 @@ export default function MerchantEscalationsPage() {
               <MessageSquare className="h-8 w-8 text-muted-foreground opacity-40" />
               <p className="font-medium text-foreground">Select an escalated conversation</p>
               <p className="text-[11px] max-w-xs">
-                Pick a ticket from the left queue to review Gemini&apos;s thoughts and send a manual human resolution.
+                Pick a ticket from the left queue to review the engine&apos;s reasoning and send a manual human resolution.
               </p>
             </div>
           )}

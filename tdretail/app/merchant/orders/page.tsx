@@ -223,7 +223,7 @@ export default function MerchantOrdersPage() {
             Merchant Order Fulfillment Center
           </h1>
           <p className="text-xs text-muted-foreground">
-            Update real-time order status, courier tracking numbers, and digital item licenses. Instant ground-truth for Gemini AI.
+            Update real-time order status, courier tracking numbers, and digital item licenses. Instant ground-truth for autonomous support.
           </p>
         </div>
 
@@ -368,7 +368,7 @@ export default function MerchantOrdersPage() {
                   {getStatusBadge(editingOrder.orderStatus)}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground">
-                  Changes made here instantly update the ground-truth database used by Gemini AI.
+                  Changes made here instantly update the ground-truth database used by the resolution engine.
                 </DialogDescription>
               </DialogHeader>
 

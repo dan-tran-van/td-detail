@@ -1,52 +1,86 @@
 import React from 'react';
 import type { Metadata } from 'next';
+import NextLink from 'next/link';
 import { DocsSidebar } from '@/components/docs/DocsSidebar';
 import { Badge } from '@/components/ui/badge';
-import { Terminal, Globe2, ShieldCheck, Server } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Sparkles,
+  ArrowLeft,
+  Server,
+  MessageSquare,
+  Building2,
+  Code2,
+  Terminal,
+} from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'API Documentation & Developer Reference | TD Retail',
   description:
-    'Comprehensive REST API specifications, Gemini AI Agent tool calling schemas, SendGrid webhooks, and storefront SDK guides for the TD Retail platform.',
+    'Comprehensive REST API specifications, Google Gemini AI agent tool calling schemas, SendGrid webhooks, and storefront SDK guides for TD Retail.',
 };
 
 export default function DocsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-background text-foreground pt-20 pb-28">
-      {/* Top Banner / Environment Status Strip */}
-      <div className="border-b border-border/70 bg-card/40 backdrop-blur-md sticky top-[60px] sm:top-[68px] z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <span className="font-semibold text-foreground">API Reference</span>
-            <span>/</span>
-            <span className="font-mono text-[11px] text-primary">v1.0 (Enterprise)</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="hidden sm:flex items-center gap-1.5 text-muted-foreground text-[11px]">
-              <Server className="h-3 w-3 text-emerald-500" />
-              <span>Base URL:</span>
-              <code className="bg-muted px-1.5 py-0.5 rounded text-[10px] font-mono text-foreground border border-border/50">
-                /api
-              </code>
-            </div>
-
-            <div className="flex items-center gap-1.5 text-[11px]">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-muted-foreground">Cloud Run Active:</span>
-              <Badge variant="outline" className="text-[10px] py-0 px-1 font-mono text-emerald-400 border-emerald-500/30">
-                asia-southeast1
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* Dedicated Stripe-Style Developer Header */}
+      <header className="sticky top-0 z-40 w-full border-b border-border/80 bg-background/95 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          {/* Left: Brand & Section Badge */}
+          <div className="flex items-center gap-3">
+            <NextLink href="/" className="flex items-center gap-2 group">
+              <div className="h-9 w-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-bold shadow-xs group-hover:scale-105 transition-transform">
+                <Sparkles className="h-4 w-4" />
+              </div>
+              <span className="font-extrabold text-base tracking-tight text-foreground">
+                TD Retail
+              </span>
+            </NextLink>
+            <span className="text-muted-foreground/40 font-light text-lg">/</span>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-sm text-foreground">Developers</span>
+              <Badge variant="secondary" className="font-mono text-[10px] px-1.5 py-0.5">
+                v1.0 (REST)
               </Badge>
             </div>
           </div>
+
+          {/* Right Navigation & Status */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <NextLink href="/">
+              <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Back to</span> Platform
+              </Button>
+            </NextLink>
+
+            <NextLink href="/inbox">
+              <Button variant="outline" size="sm" className="hidden md:flex gap-1.5 text-xs border-border bg-card">
+                <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                <span>Unified Inbox</span>
+              </Button>
+            </NextLink>
+
+            <NextLink href="/merchant">
+              <Button variant="outline" size="sm" className="hidden sm:flex gap-1.5 text-xs border-border bg-card">
+                <Building2 className="h-3.5 w-3.5 text-primary" />
+                <span>Merchant Portal</span>
+              </Button>
+            </NextLink>
+
+            <div className="hidden lg:flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-muted/60 border border-border">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="font-mono text-muted-foreground">asia-southeast1</span>
+            </div>
+          </div>
         </div>
-      </div>
+      </header>
 
       {/* Main Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           {/* Desktop Sticky Left Sidebar */}
-          <div className="hidden lg:block lg:col-span-3 sticky top-36">
+          <div className="hidden lg:block lg:col-span-3 sticky top-24">
             <DocsSidebar />
           </div>
 
