@@ -399,7 +399,7 @@ function MerchantLayoutInner({ children }: { children: React.ReactNode }) {
                   </a>
                 );
               })()}
-              <NextLink href="/chat/conv_music_01">
+              <NextLink href={`/chat/new?merchantId=${session?.merchant?.id || 'merchant_music'}`}>
                 <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 rounded-full">
                   <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
                   <span>Consumer Chat</span>

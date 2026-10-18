@@ -199,7 +199,7 @@ export default function LandingPage() {
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-              <NextLink href="/chat/conv_music_01">
+              <NextLink href="/chat/new?merchantId=merchant_music">
                 <Button size="lg" className="h-12 px-7 rounded-full gap-2 bg-primary text-primary-foreground font-semibold shadow-md hover:opacity-90 transition-all hover:scale-102">
                   <Sparkles className="h-4 w-4" />
                   <span>Launch Live Agent Demo</span>
@@ -412,7 +412,7 @@ export default function LandingPage() {
               </CardHeader>
 
               <CardContent className="p-8 pt-0 flex gap-3">
-                <NextLink href="/chat/conv_music_01" className="flex-1">
+                <NextLink href="/chat/new?merchantId=merchant_music" className="flex-1">
                   <Button className="w-full rounded-full gap-2 bg-primary text-primary-foreground font-medium shadow-sm">
                     <Play className="h-4 w-4" />
                     <span>Agent Chat</span>
@@ -475,7 +475,7 @@ export default function LandingPage() {
               </CardHeader>
 
               <CardContent className="p-8 pt-0 flex gap-3">
-                <NextLink href="/chat/conv_music_01" className="flex-1">
+                <NextLink href="/chat/new?merchantId=merchant_b" className="flex-1">
                   <Button className="w-full rounded-full gap-2 bg-primary text-primary-foreground font-medium shadow-sm">
                     <Play className="h-4 w-4" />
                     <span>Agent Chat</span>
@@ -538,7 +538,7 @@ export default function LandingPage() {
               </CardHeader>
 
               <CardContent className="p-8 pt-0 flex gap-3">
-                <NextLink href="/chat/conv_grocery_01" className="flex-1">
+                <NextLink href="/chat/new?merchantId=merchant_grocery" className="flex-1">
                   <Button className="w-full rounded-full gap-2 bg-primary text-primary-foreground font-medium shadow-sm">
                     <Play className="h-4 w-4" />
                     <span>Agent Chat</span>

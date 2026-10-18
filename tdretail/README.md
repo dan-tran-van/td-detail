@@ -148,12 +148,12 @@ Follow these steps to experience all capabilities:
 
 ### Step 1: Open the Consolidated Inbox (`/inbox`)
 1. Visit [http://localhost:3000/inbox](http://localhost:3000/inbox).
-2. Note the multi-merchant view showing conversations for both **SoundWave Digital** (Digital Music) and **FreshCart Direct** (Groceries).
-3. Switch filters between **All Merchants**, **SoundWave Digital**, and **FreshCart Direct**.
-4. Use the persona switcher in the navbar to toggle between **Sarah Connor** and **Alex Chen**.
+2. Use the persona switcher in the sidebar/bottom footer to select **Sarah Connor** or browse as a custom customer.
+3. Note that the inbox and sidebar dynamically scope to show only stores where the customer has active conversations.
+4. Try clicking **"+ New Chat"** to open the real-time Store Discovery & Search dialog.
 
-### Step 2: Test Grounded Order Lookup in Chat (`/chat/conv_music_01`)
-1. Click on the SoundWave Digital thread (`Question regarding master stems download for Neon Echoes #ORD-MUS-8821`).
+### Step 2: Test Grounded Order Lookup in Chat
+1. While on Sarah Connor's account, open her SoundWave Digital thread (`Question regarding master stems download for Neon Echoes #ORD-MUS-8821`), or start a new chat via [http://localhost:3000/chat/new?merchantId=merchant_music](http://localhost:3000/chat/new?merchantId=merchant_music).
 2. Ask: *"What is my license key and download link for order #ORD-MUS-8821?"*
 3. Observe the AI response quoting the real license key (`SW-8821-NEON-FLAC-L01`) and direct vault zip download link.
 4. Click **"Inspect Server Tool Calls"** under the AI response to view the validated `lookupOrderStatus` execution.

@@ -133,24 +133,24 @@ export function Navbar() {
                         AI Agent Chat Demos
                       </p>
                       <NavigationMenuLink
-                        render={<NextLink href="/chat/conv_music_01" />}
+                        render={<NextLink href="/chat/new?merchantId=merchant_music" />}
                         className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-muted text-xs text-foreground cursor-pointer"
                       >
                         <span className="flex items-center gap-2">
                           <Disc className="h-3 w-3 text-indigo-500" />
                           <span>SoundWave License Support</span>
                         </span>
-                        <span className="text-[10px] text-muted-foreground">Demo &rarr;</span>
+                        <span className="text-[10px] text-muted-foreground">Chat &rarr;</span>
                       </NavigationMenuLink>
                       <NavigationMenuLink
-                        render={<NextLink href="/chat/conv_grocery_01" />}
+                        render={<NextLink href="/chat/new?merchantId=merchant_b" />}
                         className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-muted text-xs text-foreground cursor-pointer"
                       >
                         <span className="flex items-center gap-2">
-                          <ShoppingBag className="h-3 w-3 text-emerald-500" />
-                          <span>FreshCart Grocery Dispatch</span>
+                          <Zap className="h-3 w-3 text-cyan-500" />
+                          <span>Volt Nest Warranty & RMA</span>
                         </span>
-                        <span className="text-[10px] text-muted-foreground">Demo &rarr;</span>
+                        <span className="text-[10px] text-muted-foreground">Chat &rarr;</span>
                       </NavigationMenuLink>
                     </div>
                   </div>
@@ -232,7 +232,7 @@ export function Navbar() {
             </Button>
           </NextLink>
 
-          <NextLink href="/chat/conv_music_01" className="hidden sm:inline-flex">
+          <NextLink href="/chat/new?merchantId=merchant_music" className="hidden sm:inline-flex">
             <Button
               size="sm"
               className="h-8 px-3.5 rounded-full text-xs font-semibold gap-1.5 bg-primary text-primary-foreground shadow-xs hover:opacity-90 transition-all hover:scale-102"
@@ -268,7 +268,7 @@ export function Navbar() {
                       Storefronts
                     </p>
                     <NextLink
-                      href="/chat/conv_music_01"
+                      href="/chat/new?merchantId=merchant_music"
                       onClick={() => setMobileOpen(false)}
                       className="flex items-center justify-between p-2.5 rounded-xl hover:bg-muted transition-colors"
                     >
@@ -277,21 +277,21 @@ export function Navbar() {
                         <span className="text-xs font-medium text-foreground">SoundWave Digital</span>
                       </div>
                       <Badge variant="outline" className="text-[9px]">
-                        Demo Chat
+                        AI Chat
                       </Badge>
                     </NextLink>
 
                     <NextLink
-                      href="/chat/conv_grocery_01"
+                      href="/chat/new?merchantId=merchant_b"
                       onClick={() => setMobileOpen(false)}
                       className="flex items-center justify-between p-2.5 rounded-xl hover:bg-muted transition-colors"
                     >
                       <div className="flex items-center gap-2.5">
-                        <ShoppingBag className="h-4 w-4 text-primary" />
-                        <span className="text-xs font-medium text-foreground">FreshCart Direct</span>
+                        <Zap className="h-4 w-4 text-cyan-500" />
+                        <span className="text-xs font-medium text-foreground">Volt Nest Smart Tech</span>
                       </div>
                       <Badge variant="outline" className="text-[9px]">
-                        Demo Chat
+                        AI Chat
                       </Badge>
                     </NextLink>
                   </div>
@@ -338,7 +338,7 @@ export function Navbar() {
                   </div>
 
                   <div className="pt-2">
-                    <NextLink href="/chat/conv_music_01" onClick={() => setMobileOpen(false)}>
+                    <NextLink href="/chat/new?merchantId=merchant_music" onClick={() => setMobileOpen(false)}>
                       <Button className="w-full rounded-full gap-2 text-xs font-semibold bg-primary text-primary-foreground h-10">
                         <Sparkles className="h-4 w-4" />
                         <span>Launch Interactive Demo</span>
