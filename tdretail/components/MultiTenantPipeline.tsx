@@ -31,9 +31,9 @@ interface NodeDetail {
 const NODE_DETAILS: Record<NodeId, NodeDetail> = {
   music: {
     title: 'SoundWave Digital Storefront',
-    subtitle: 'Next.js 16 App Router on Port 3001',
+    subtitle: 'External Music Storefront (SoundWave)',
     type: 'External Merchant A',
-    payload: `// Synchronized from Port 3001
+    payload: `// Synchronized from SoundWave Digital
 POST /api/orders
 {
   "merchantId": "merchant_music",
@@ -46,9 +46,9 @@ POST /api/orders
   },
   tech: {
     title: 'Volt Nest Storefront',
-    subtitle: 'Next.js 16 App Router on Port 3002',
+    subtitle: 'External Consumer Tech Storefront (Volt Nest)',
     type: 'External Merchant B',
-    payload: `// Synchronized from Port 3002
+    payload: `// Synchronized from Volt Nest
 POST /api/orders
 {
   "merchantId": "merchant_b",
@@ -152,7 +152,7 @@ export function MultiTenantPipeline() {
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <Disc className="h-4 w-4 text-indigo-500" />
-                    <Badge variant="outline" className="text-[9px] font-mono">Port 3001</Badge>
+                    <Badge variant="outline" className="text-[9px] font-mono">Digital Audio</Badge>
                   </div>
                   <p className="font-bold text-xs text-foreground">SoundWave Digital</p>
                   <p className="text-[10px] text-muted-foreground">Digital Rights & Stems</p>
@@ -169,7 +169,7 @@ export function MultiTenantPipeline() {
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <Zap className="h-4 w-4 text-cyan-500" />
-                    <Badge variant="outline" className="text-[9px] font-mono">Port 3002</Badge>
+                    <Badge variant="outline" className="text-[9px] font-mono">Smart Tech</Badge>
                   </div>
                   <p className="font-bold text-xs text-foreground">Volt Nest</p>
                   <p className="text-[10px] text-muted-foreground">Hardware & Fast Chargers</p>

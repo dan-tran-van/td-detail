@@ -66,7 +66,7 @@ export default function PricingPage() {
             </span>
           </h1>
           <p className="text-base sm:text-lg text-muted-foreground leading-relaxed font-normal">
-            Start completely free with zero credit card required. Connect your external storefronts today, evaluate autonomous resolutions on live orders, and scale as commercial tiers launch.
+            Start completely free with zero credit card required. Join the shared customer support network, connect your external storefronts with total data sovereignty, and evaluate autonomous resolutions on live orders.
           </p>
         </div>
 
@@ -492,6 +492,15 @@ export default function PricingPage() {
         </div>
 
         <Accordion className="w-full bg-card/60 backdrop-blur border border-border/80 rounded-2xl shadow-sm">
+          <AccordionItem value="item-network">
+            <AccordionTrigger className="text-base font-semibold px-6 py-5">
+              How does TD Retail compare to traditional platforms like Zendesk or Gorgias?
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6 text-sm text-muted-foreground leading-relaxed">
+              Unlike traditional customer-support platforms that help each merchant manage its own support inbox, we&apos;re building a <strong>shared customer-facing support network</strong>: customers access one unified platform across multiple merchants, while each merchant retains control over its own data, workflows, and AI intelligence. Participating stores gain access to a unified customer nexus without giving up proprietary data boundaries or paying exorbitant per-seat helpdesk fees.
+            </AccordionContent>
+          </AccordionItem>
+
           <AccordionItem value="item-1">
             <AccordionTrigger className="text-base font-semibold px-6 py-5">
               Is TD Retail really free to use today?

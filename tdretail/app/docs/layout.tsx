@@ -4,6 +4,7 @@ import NextLink from 'next/link';
 import { DocsSidebar } from '@/components/docs/DocsSidebar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { TDLogo } from '@/components/TDLogo';
 import {
   Sparkles,
   ArrowLeft,
@@ -28,13 +29,8 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Left: Brand & Section Badge */}
           <div className="flex items-center gap-3">
-            <NextLink href="/" className="flex items-center gap-2 group">
-              <div className="h-9 w-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-bold shadow-xs group-hover:scale-105 transition-transform">
-                <Sparkles className="h-4 w-4" />
-              </div>
-              <span className="font-extrabold text-base tracking-tight text-foreground">
-                TD Retail
-              </span>
+            <NextLink href="/" className="flex items-center group cursor-pointer">
+              <TDLogo size="sm" showWordmark />
             </NextLink>
             <span className="text-muted-foreground/40 font-light text-lg">/</span>
             <div className="flex items-center gap-2">

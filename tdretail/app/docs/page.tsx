@@ -65,7 +65,7 @@ print(res.json())`,
           Platform Overview & Architecture
         </h1>
         <p className="text-base text-muted-foreground leading-relaxed max-w-3xl">
-          Welcome to the TD Retail Platform Developer Documentation. TD Retail provides unified, tenant-isolated customer operations, server-grounded Gemini AI support orchestration, and bidirectional email relay for multi-brand storefront ecosystems.
+          Welcome to the TD Retail Platform Developer Documentation. Unlike traditional support platforms that manage isolated inboxes for individual merchants, TD Retail operates as a <strong>shared customer-facing support network</strong>: customers access one unified platform across multiple merchants, while each merchant retains sovereign control over its proprietary data, fulfillment workflows, and AI intelligence via decoupled REST APIs.
         </p>
       </div>
 

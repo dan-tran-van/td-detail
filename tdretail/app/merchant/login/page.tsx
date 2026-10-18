@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { TDLogo } from '@/components/TDLogo';
 
 export default function MerchantLoginPage() {
   const router = useRouter();
@@ -82,13 +83,8 @@ export default function MerchantLoginPage() {
     <div className="w-full max-w-md space-y-6">
       {/* Brand Header */}
       <div className="text-center space-y-2">
-        <NextLink href="/" className="inline-flex items-center gap-2 mb-2 group">
-          <div className="h-9 w-9 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center text-sm shadow-sm group-hover:scale-105 transition-transform">
-            TD
-          </div>
-          <span className="font-bold text-lg tracking-tight text-foreground">
-            Retail Merchant Hub
-          </span>
+        <NextLink href="/" className="inline-flex items-center gap-2 mb-2 group cursor-pointer">
+          <TDLogo size="md" showWordmark />
         </NextLink>
         <p className="text-xs text-muted-foreground">
           Dedicated administration & human escalation management for registered storefronts.
@@ -131,14 +127,14 @@ export default function MerchantLoginPage() {
               >
                 <div className="h-8 w-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0">
                   {demoLoading === 'merchant_music' || demoLoading === 'merchant_a' ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
+                     <RefreshCw className="h-4 w-4 animate-spin" />
                   ) : (
                     <Disc className="h-4 w-4" />
                   )}
                 </div>
                 <div className="truncate">
                   <div className="text-xs font-semibold text-foreground truncate">SoundWave Digital</div>
-                  <div className="text-[10px] text-muted-foreground">Port 3001 (Merchant A)</div>
+                  <div className="text-[10px] text-muted-foreground">Digital Music (Merchant A)</div>
                 </div>
               </Button>
 
@@ -158,7 +154,7 @@ export default function MerchantLoginPage() {
                 </div>
                 <div className="truncate">
                   <div className="text-xs font-semibold text-foreground truncate">Volt Nest Store</div>
-                  <div className="text-[10px] text-muted-foreground">Port 3002 (Merchant B)</div>
+                  <div className="text-[10px] text-muted-foreground">Consumer Tech (Merchant B)</div>
                 </div>
               </Button>
             </div>

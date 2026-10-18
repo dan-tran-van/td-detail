@@ -99,7 +99,7 @@ const STORE_CONFIGS: Record<StoreKey, StoreData> = {
 };
 
 const LIVE_EVENTS = [
-  { time: '12:04:18', text: 'Order #ORD-VOLT-9021 synced from Port 3002', status: 'sync' },
+  { time: '12:04:18', text: 'Order #ORD-VOLT-9021 synced from Volt Nest Storefront', status: 'sync' },
   { time: '12:04:19', text: 'Tool lookupOrderStatus invoked: 184ms deterministic roundtrip', status: 'tool' },
   { time: '12:04:20', text: 'Digital license key SW-PRO-8821 verified in customer vault', status: 'security' },
   { time: '12:04:22', text: 'SendGrid inbound webhook payload HMAC signature verified', status: 'webhook' },
